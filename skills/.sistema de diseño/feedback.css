@@ -1,0 +1,19 @@
+:root {
+  /* Feedback States */
+  --color-feedback-success-background: #cafff2;
+  --color-feedback-success-light: #26d07c;
+  --color-feedback-success-medium: #26d07c;
+  --color-feedback-success-dark: #189a59;
+
+  --color-feedback-error-background: #ffe8e7;
+  --color-feedback-error-light: #ff7972;
+  --color-feedback-error-dark: #ff3d33;
+
+  --color-feedback-warning-background: #fff2e3;
+  --color-feedback-warning-light: #f89500;
+  --color-feedback-warning-dark: #b06a00;
+
+  --color-feedback-info-background: #ecf1ff;
+  --color-feedback-info-light: #82a4ff;
+  --color-feedback-info-dark: #5279da;
+}

@@ -1,0 +1,82 @@
+:root {
+  /* ========================================
+     1. PRIMARY COLORS
+     ======================================== */
+
+  /* Corporate Blue */
+  --color-primary-blue: #1d99cc;
+
+  /* Corporate Greens */
+  --color-primary-green-1: #3bb339;
+  --color-primary-green-2: #67cc41;
+
+  /* Corporate Grays */
+  --color-primary-gray-1: #b3b3b3;
+  --color-primary-gray-2: #e0e0e0;
+  --color-primary-gray-3: #848484;
+
+  /* ========================================
+     2. SECONDARY COLORS
+     ======================================== */
+
+  /* Secondary Blues - Light Tones */
+  --color-secondary-blue-1: #2facd3;
+  --color-secondary-blue-2: #51c9e5;
+  --color-secondary-blue-3: #60d5e8;
+  --color-secondary-blue-4: #75e4ef;
+
+  /* Secondary Blues - Dark Tones */
+  --color-secondary-blue-5: #1e8bb6;
+  --color-secondary-blue-6: #237ea0;
+  --color-secondary-blue-7: #28718b;
+  --color-secondary-blue-8: #2d6475;
+
+  /* Secondary Greens - Light Tones */
+  --color-secondary-green-1: #7ace52;
+  --color-secondary-green-2: #8cdd66;
+  --color-secondary-green-3: #9be276;
+
+  /* Secondary Greens - Dark Tones */
+  --color-secondary-green-4: #33a030;
+  --color-secondary-green-5: #2d8e28;
+  --color-secondary-green-6: #287c22;
+  --color-secondary-green-7: #226b1a;
+
+  /* ========================================
+     3. TERTIARY GRAYS
+     ======================================== */
+
+  --color-tertiary-gray-1: #4f4f4f;
+  --color-tertiary-gray-2: #1a1a1e;
+
+  /* ========================================
+     4. TEXT COLORS
+     ======================================== */
+
+  --color-text-dark: #282828;
+  --color-text-medium: #818181;
+  --color-text-light: #686868;
+  --color-text-link: #1d99cc;
+  --color-text-disabled: #b3b3b3;
+
+  /* ========================================
+     5. NEUTRAL COLORS
+     ======================================== */
+
+  --color-neutral-white: #ffffff;
+  --color-neutral-00: #ffffff;
+  --color-neutral-60: #686868;
+  --color-neutral-80: #282828;
+
+  /* ========================================
+     6. APP BUTTON STATE COLORS
+     ======================================== */
+
+  --color-app-button-blue-enabled: var(--color-primary-blue);
+  --color-app-button-blue-hover: var(--color-secondary-blue-5);
+  --color-app-button-blue-active: var(--color-secondary-blue-6);
+  --color-app-button-green-enabled: var(--color-primary-green-1);
+  --color-app-button-green-hover: var(--color-secondary-green-4);
+  --color-app-button-green-active: var(--color-secondary-green-5);
+  --color-app-button-disabled: var(--color-bg-disabled);
+}

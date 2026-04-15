@@ -1,0 +1,19 @@
+:root {
+  /* Quoia Brand Colors */
+  --color-brand-quoia-primary: #b8cf3e;
+  --color-brand-quoia-secondary: #d5f044;
+  --color-brand-quoia-light: #eef3d7;
+  --color-brand-quoia-opacity: rgba(184, 207, 62, 0.2);
+
+  /* Zentrack Brand Colors */
+  --color-brand-zentrack-primary: #fd9c10;
+  --color-brand-zentrack-light: #ffc46e;
+  --color-brand-zentrack-background: #ffe7c5;
+  --color-brand-zentrack-opacity: rgba(253, 156, 16, 0.2);
+
+  /* Unergy Brand Colors */
+  --color-brand-unergy-primary: #915bd8;
+  --color-brand-unergy-light: #ac88da;
+  --color-brand-unergy-background: #e0d5ee;
+  --color-brand-unergy-opacity: rgba(145, 91, 216, 0.2);
+}

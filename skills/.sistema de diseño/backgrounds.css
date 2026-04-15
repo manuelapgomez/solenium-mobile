@@ -1,0 +1,14 @@
+:root {
+  /* Backgrounds */
+  --color-bg-light: #f4f4f4;
+  --color-bg-disabled: #e6e6e6;
+  --color-bg-light-green: #f9fdf1;
+  --color-bg-light-blue: #ecf6fa;
+  --color-bg-white: #ffffff;
+  --color-bg-helper: #fafafa;
+
+  /* Brand backgrounds */
+  --color-bg-quoia: var(--color-brand-quoia-light);
+  --color-bg-zentrack: var(--color-brand-zentrack-background);
+  --color-bg-unergy: var(--color-brand-unergy-background);
+}

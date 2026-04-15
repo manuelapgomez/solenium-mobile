@@ -1,0 +1,37 @@
+:root {
+  /* ========================================
+     12. SEMANTIC ALIASES
+     Use these aliases for context-specific styling
+     ======================================== */
+
+  /* Brand */
+  --brand-primary: var(--color-primary-blue);
+  --brand-secondary: var(--color-primary-green-1);
+
+  /* Button states */
+  --button-primary-default: var(--color-app-button-blue-enabled);
+  --button-primary-hover: var(--color-app-button-blue-hover);
+  --button-primary-active: var(--color-app-button-blue-active);
+  --button-secondary-default: var(--color-app-button-green-enabled);
+  --button-secondary-hover: var(--color-app-button-green-hover);
+  --button-secondary-active: var(--color-app-button-green-active);
+  --button-disabled: var(--color-app-button-disabled);
+
+  /* Feedback states */
+  --success: var(--color-feedback-success-dark);
+  --success-bg: var(--color-feedback-success-background);
+  --error: var(--color-feedback-error-dark);
+  --error-bg: var(--color-feedback-error-background);
+  --warning: var(--color-feedback-warning-dark);
+  --warning-bg: var(--color-feedback-warning-background);
+  --info: var(--color-feedback-info-dark);
+  --info-bg: var(--color-feedback-info-background);
+
+  /* Brand colors - quick access */
+  --quoia: var(--color-brand-quoia-primary);
+  --quoia-light: var(--color-brand-quoia-light);
+  --zentrack: var(--color-brand-zentrack-primary);
+  --zentrack-light: var(--color-brand-zentrack-light);
+  --unergy: var(--color-brand-unergy-primary);
+  --unergy-light: var(--color-brand-unergy-light);
+}

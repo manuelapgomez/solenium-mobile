@@ -1,0 +1,24 @@
+:root {
+  /* ========================================
+     BORDER RADIUS (CORNERS)
+     ======================================== */
+  --corner-none: 0;
+  --corner-xxsmall: 4px;
+  --corner-xsmall: 8px;
+  --corner-small: 10px;
+  --corner-medium: 18px;
+  --corner-large: 26px;
+  --corner-xlarge: 34px;
+  --corner-xxlarge: 42px;
+  --corner-bold: 70px;
+
+  /* ========================================
+     BORDER STYLES
+     ======================================== */
+  --border-light: var(--color-primary-gray-2);
+  --border-medium: var(--color-primary-gray-1);
+  --border-dark: var(--color-primary-gray-3);
+  --border-radius-small: var(--corner-small);
+  --border-radius-medium: var(--corner-medium);
+  --border-radius-large: var(--corner-large);
+}
