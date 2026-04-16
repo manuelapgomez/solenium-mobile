@@ -1,278 +1,258 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, ImageBackground, Animated, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Dimensions, Image, Animated } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 
 const { width } = Dimensions.get('window');
+const IMG_SIZE = (width - 3) / 4; // 4 items per row with 1px border
+
+// Mock data
+const MOCK_PREVIOUS_EVIDENCE = {
+  photos: [
+    'https://images.unsplash.com/photo-1541888081688-ea1aff1bbd06?q=80&w=200&auto=format&fit=crop',
+    'https://images.unsplash.com/photo-1508514177221-188b1c77eca2?q=80&w=200&auto=format&fit=crop',
+  ],
+  progress: 45,
+  hasAudio: true
+};
+
+const MOCK_GALLERY = [
+  'https://images.unsplash.com/photo-1590486803833-1c5dc8ddd4c8?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1621905252507-b35492cc74b4?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1531834685032-c34bf0d84c77?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1518398046578-8cca57782e17?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1497366754035-f200968a6e72?q=80&w=600&auto=format&fit=crop',
+  'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600&auto=format&fit=crop',
+];
 
 export default function EvidenceScreen() {
-  const router = useRouter();
-  const { title } = useLocalSearchParams();
-  
-  // States
-  const [progress, setProgress] = useState(0);
-  const [photos, setPhotos] = useState<number[]>([]); // Array of photo placeholders
-  const [isRecording, setIsRecording] = useState(false);
-  const [hasAudio, setHasAudio] = useState(false);
-  
-  // Animation for recording
-  const recordAnim = new Animated.Value(0);
+    const router = useRouter();
+    const { title } = useLocalSearchParams();
+    
+    // Simulate fetching previous history
+    const previousData = title === 'Montaje Estructura Metálica' ? MOCK_PREVIOUS_EVIDENCE : MOCK_PREVIOUS_EVIDENCE;
+    
+    // States
+    const [progress, setProgress] = useState<number | null>(null);
+    const [selectedImage, setSelectedImage] = useState<string>(MOCK_GALLERY[0]);
 
-  useEffect(() => {
-    if (isRecording) {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(recordAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-          Animated.timing(recordAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
-        ])
-      ).start();
-    } else {
-      recordAnim.setValue(0);
-    }
-  }, [isRecording]);
+    return (
+        <SafeAreaView style={styles.container}>
+            {/* Header */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+                    <Feather name="x" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Nueva publicación</Text>
+                <TouchableOpacity onPress={() => router.back()} style={styles.headerActionBtn}>
+                    <Text style={styles.headerActionText}>Siguiente</Text>
+                </TouchableOpacity>
+            </View>
 
-  const addPhoto = () => {
-    if (photos.length < 5) {
-      setPhotos([...photos, Date.now()]);
-    }
-  };
-
-  const toggleRecording = () => {
-    if (isRecording) {
-      setIsRecording(false);
-      setHasAudio(true);
-    } else {
-      setIsRecording(true);
-    }
-  };
-
-  return (
-    <View style={styles.container}>
-      {/* BACKGROUND CAMERA SIMULATION */}
-      <ImageBackground 
-        source={require('../assets/images/solar_site.png')}
-        style={styles.cameraBg}
-      >
-        <View style={styles.overlay}>
-          
-          {/* TOP BAR - INS STYLE PROGRESS */}
-          <SafeAreaView>
-            <View style={styles.insContainer}>
-                {/* Visual indicator of multiple photos like stories */}
-                <View style={styles.storyProgressRow}>
-                    {[0, 1, 2, 3, 4].map((i) => (
-                        <View key={i} style={[
-                            styles.storySegment, 
-                            i < photos.length && styles.storySegmentActive,
-                            i === photos.length && isRecording && styles.storySegmentRecording
-                        ]} />
-                    ))}
-                </View>
-                <View style={styles.header}>
-                    <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
-                        <Feather name="x" size={24} color={Colors.paper} />
-                    </TouchableOpacity>
-                    <View style={styles.taskBadge}>
-                         <Text style={styles.taskBadgeText}>{title || 'Montaje Paneles'}</Text>
+            {/* Top Preview Section */}
+            <View style={styles.previewContainer}>
+                <Image source={{ uri: selectedImage }} style={styles.previewImage} resizeMode="cover" />
+                
+                {/* Visual Camera Hint (Optional overly for the first image assuming it's the live camera placeholder) */}
+                {selectedImage === MOCK_GALLERY[0] && (
+                    <View style={styles.previewOverlay}>
+                        <View style={styles.cameraIconBg}>
+                            <Feather name="camera" size={28} color={Colors.textPrimary} />
+                        </View>
+                        <Text style={styles.previewHintText}>Toca para capturar evidencia</Text>
                     </View>
-                    <View style={{ width: 44 }} />
+                )}
+            </View>
+
+            {/* Bottom Section (Overlaid progress & gallery) */}
+            <View style={styles.bottomSection}>
+                
+                {/* Overlaid Progress Card */}
+                <View style={styles.progressCardWrapper}>
+                    <View style={styles.progressCard}>
+                        <Text style={styles.progressCardTitle}>¿CUÁNTO AVANZAMOS?</Text>
+                        <View style={styles.progressButtonsRow}>
+                            {[25, 50, 75, 100].map(val => (
+                                <TouchableOpacity 
+                                    key={val}
+                                    style={[styles.progressPill, progress === val && styles.progressPillActive]}
+                                    onPress={() => setProgress(val)}
+                                >
+                                    <Text style={[styles.progressPillText, progress === val && styles.textWhite]}>{val}%</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+                </View>
+
+                {/* Layout Container for below the overlapped card */}
+                <View style={styles.lowerContent}>
+                    
+                    {/* History Pre-Viewer (if exists) */}
+                    {previousData && (
+                        <View style={styles.historySection}>
+                            <View style={styles.historyHeader}>
+                                <Text style={styles.historyTitle}>Subido anteriormente</Text>
+                                <View style={styles.historyBadge}>
+                                    <Feather name="trending-up" size={12} color={Colors.primary} />
+                                    <Text style={styles.historyBadgeText}>{previousData.progress}%</Text>
+                                </View>
+                            </View>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.historyScroll}>
+                                {previousData.photos.map((img, idx) => (
+                                    <Image key={idx} source={{ uri: img }} style={styles.historyThumb} />
+                                ))}
+                                {previousData.hasAudio && (
+                                    <View style={styles.historyAudioPill}>
+                                        <Feather name="mic" size={16} color={Colors.textSecondary} />
+                                    </View>
+                                )}
+                            </ScrollView>
+                        </View>
+                    )}
+
+                    {/* Gallery Tools Header */}
+                    <View style={styles.galleryHeaderRow}>
+                        <TouchableOpacity style={styles.recentDropdown}>
+                            <Text style={styles.recentText}>Recientes</Text>
+                            <Feather name="chevron-down" size={20} color={Colors.textPrimary} />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.selectBtn}>
+                            <Feather name="copy" size={14} color={Colors.textSecondary} />
+                            <Text style={styles.selectBtnText}>Seleccionar</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Gallery Grid */}
+                    <ScrollView contentContainerStyle={styles.gridContainer} showsVerticalScrollIndicator={false}>
+                        {/* Live Camera Grid Item First */}
+                        <TouchableOpacity style={styles.gridCameraCell}>
+                            <Feather name="camera" size={24} color={Colors.paper} />
+                        </TouchableOpacity>
+                        
+                        {/* Standard Gallery Images */}
+                        {MOCK_GALLERY.map((img, idx) => (
+                            <TouchableOpacity key={idx} style={styles.gridImageCell} onPress={() => setSelectedImage(img)}>
+                                <Image source={{ uri: img }} style={styles.gridImage} />
+                                {selectedImage === img && <View style={styles.gridImageSelectedOverlay} />}
+                            </TouchableOpacity>
+                        ))}
+                        <View style={{ width: '100%', height: 40 }} />
+                    </ScrollView>
                 </View>
             </View>
-          </SafeAreaView>
-
-          {/* MIDDLE - Capture & Evidence Area */}
-          <View style={styles.centerContent}>
-             <TouchableOpacity style={styles.captureCircle} onPress={addPhoto}>
-                <View style={styles.captureInner}>
-                   <Feather name={photos.length > 0 ? "plus" : "camera"} size={40} color={Colors.textPrimary} />
-                </View>
-             </TouchableOpacity>
-             <Text style={styles.centerHint}>
-                {photos.length > 0 ? `${photos.length} fotos capturadas` : 'Toca para capturar evidencia'}
-             </Text>
-          </View>
-
-          {/* BOTTOM PANEL - ONE HAND OPTIMIZED */}
-          <View style={styles.bottomSheet}>
-             
-             {/* PROGRESS SELECTOR - BIG BUTTONS ONLY */}
-             <View style={styles.section}>
-                <Text style={styles.sectionLabel}>¿Cuánto avanzamos?</Text>
-                <View style={styles.progressRow}>
-                   {[25, 50, 75, 100].map((val) => (
-                      <TouchableOpacity 
-                        key={val} 
-                        style={[styles.progressBtn, progress === val && styles.progressBtnActive]}
-                        onPress={() => setProgress(val)}
-                      >
-                         <Text style={[styles.progressBtnText, progress === val && styles.textWhite]}>{val}%</Text>
-                      </TouchableOpacity>
-                   ))}
-                </View>
-             </View>
-
-             {/* AUDIO NOTE - TAP TO START/STOP */}
-             <View style={styles.audioContainer}>
-                <TouchableOpacity 
-                    style={[
-                        styles.micBtn, 
-                        isRecording && styles.micBtnRecording,
-                        hasAudio && !isRecording && styles.micBtnDone
-                    ]} 
-                    onPress={toggleRecording}
-                >
-                    <Animated.View style={{ transform: [{ scale: isRecording ? recordAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) : 1 }] }}>
-                        <Feather 
-                            name={isRecording ? "square" : (hasAudio ? "check" : "mic")} 
-                            size={28} 
-                            color={Colors.paper} 
-                        />
-                    </Animated.View>
-                </TouchableOpacity>
-                <View style={styles.audioInfo}>
-                    <Text style={styles.audioTitle}>
-                        {isRecording ? 'Grabando nota de voz...' : (hasAudio ? 'Nota de voz guardada' : 'Agregar nota de voz')}
-                    </Text>
-                    <Text style={styles.audioSubtitle}>
-                        {isRecording ? 'Toca para detener' : (hasAudio ? 'Toca para grabar de nuevo' : 'Perfecto para manos ocupadas')}
-                    </Text>
-                </View>
-             </View>
-
-             {/* FINAL ACTION */}
-             <TouchableOpacity 
-                style={[styles.saveBtn, (photos.length === 0 || progress === 0) && styles.saveBtnDisabled]}
-                onPress={() => router.back()}
-                disabled={photos.length === 0 || progress === 0}
-             >
-                <Text style={styles.saveBtnText}>Finalizar Registro</Text>
-                <Feather name="arrow-right" size={20} color={Colors.paper} />
-             </TouchableOpacity>
-          </View>
-
-        </View>
-      </ImageBackground>
-    </View>
-  );
+        </SafeAreaView>
+    );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
-  },
-  cameraBg: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.2)', // Very discrete overlay
-    justifyContent: 'space-between',
-  },
-  insContainer: {
-    paddingTop: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-  },
-  storyProgressRow: {
-    flexDirection: 'row',
-    height: 3,
-    gap: 4,
-    marginBottom: Spacing.md,
-  },
-  storySegment: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 2,
-  },
-  storySegmentActive: {
-    backgroundColor: Colors.paper,
-  },
-  storySegmentRecording: {
-    backgroundColor: Colors.primary,
+    backgroundColor: '#000', // Keeps standard phone dark edge wrapping native status bars
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  closeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  taskBadge: {
-    backgroundColor: 'rgba(255,255,255,0.9)',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.full,
+    height: 50,
+    backgroundColor: Colors.paper,
   },
-  taskBadgeText: {
-    fontSize: 13,
+  iconBtn: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 16,
     fontWeight: '800',
     color: Colors.textPrimary,
   },
-  centerContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  headerActionBtn: {
+    paddingVertical: 8,
   },
-  captureCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 4,
-    borderColor: Colors.paper,
-    ...Shadows.lg,
-  },
-  captureInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: Colors.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  centerHint: {
-    color: Colors.paper,
-    marginTop: Spacing.md,
-    fontSize: 16,
+  headerActionText: {
+    fontSize: 15,
     fontWeight: '700',
-    textShadowColor: 'rgba(0,0,0,0.7)',
+    color: '#0033FF', // Primary blue link color often used for Actions
+  },
+  previewContainer: {
+    height: width * 0.9, // Almost square but leaves room, typical of insta aspect ratios
+    width: '100%',
+    backgroundColor: '#E5E7EB',
+    position: 'relative',
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraIconBg: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  previewHintText: {
+    color: Colors.paper,
+    fontSize: 18,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowRadius: 4,
   },
-  bottomSheet: {
+  bottomSection: {
+    flex: 1,
     backgroundColor: Colors.paper,
-    borderTopLeftRadius: Radii.lg,
-    borderTopRightRadius: Radii.lg,
-    padding: Spacing.xl,
-    paddingBottom: Spacing.xxl,
+    position: 'relative',
+  },
+  progressCardWrapper: {
+    position: 'absolute',
+    top: -35, // Overlap the preview
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  progressCard: {
+    width: '90%',
+    backgroundColor: Colors.paper,
+    borderRadius: Radii.xl,
+    padding: Spacing.md,
     ...Shadows.lg,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  section: {
-    marginBottom: Spacing.xl,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '700',
+  progressCardTitle: {
+    fontSize: 12,
+    fontWeight: '800',
     color: Colors.textSecondary,
     marginBottom: Spacing.md,
     textTransform: 'uppercase',
   },
-  progressRow: {
+  progressButtonsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%',
   },
-  progressBtn: {
-    width: (width - Spacing.xl * 2 - 24) / 4,
-    height: 50,
+  progressPill: {
+    flex: 1,
+    height: 44,
+    marginHorizontal: 4,
     borderRadius: Radii.md,
     backgroundColor: Colors.background,
     alignItems: 'center',
@@ -280,71 +260,131 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  progressBtnActive: {
+  progressPillActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
-  progressBtnText: {
-    fontSize: 16,
+  progressPillText: {
+    fontSize: 14,
     fontWeight: '800',
     color: Colors.textPrimary,
-  },
-  audioContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.background,
-    padding: Spacing.md,
-    borderRadius: Radii.lg,
-    marginBottom: Spacing.xl,
-  },
-  micBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.md,
-  },
-  micBtnRecording: {
-    backgroundColor: Colors.error,
-  },
-  micBtnDone: {
-    backgroundColor: Colors.success,
-  },
-  audioInfo: {
-    flex: 1,
-    marginLeft: Spacing.md,
-  },
-  audioTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  audioSubtitle: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  saveBtn: {
-    backgroundColor: Colors.textPrimary,
-    height: 64,
-    borderRadius: Radii.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.md,
-  },
-  saveBtnDisabled: {
-    opacity: 0.3,
-  },
-  saveBtnText: {
-    color: Colors.paper,
-    fontSize: 18,
-    fontWeight: '800',
-    marginRight: Spacing.sm,
   },
   textWhite: {
     color: Colors.paper,
+  },
+  lowerContent: {
+    flex: 1,
+    paddingTop: 70, // Space for the overlapping card
+  },
+  historySection: {
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  historyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  historyTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  historyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  historyBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.primary,
+    marginLeft: 4,
+  },
+  historyScroll: {
+    flexDirection: 'row',
+  },
+  historyThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    marginRight: Spacing.sm,
+    backgroundColor: Colors.border,
+  },
+  historyAudioPill: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.sm,
+  },
+  galleryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.md,
+  },
+  recentDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  recentText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginRight: 4,
+  },
+  selectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  selectBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    marginLeft: 6,
+  },
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  gridCameraCell: {
+    width: IMG_SIZE,
+    height: IMG_SIZE,
+    marginRight: 1,
+    marginBottom: 1,
+    backgroundColor: '#1E293B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridImageCell: {
+    width: IMG_SIZE,
+    height: IMG_SIZE,
+    marginRight: 1,
+    marginBottom: 1,
+  },
+  gridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  gridImageSelectedOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255,255,255,0.4)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.8)',
   }
 });
