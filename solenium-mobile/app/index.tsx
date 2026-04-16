@@ -101,7 +101,11 @@ export default function Home() {
     const isAhead = variance >= 0;
 
     return (
-      <View style={[styles.detailedCard, isActive && Shadows.md]}>
+      <TouchableOpacity 
+        activeOpacity={0.8}
+        onPress={() => router.push({ pathname: '/evidence', params: { title: event.title } })}
+        style={[styles.detailedCard, isActive && Shadows.md]}
+      >
         <View style={styles.detailedHeader}>
           <View style={styles.detailedHeaderLeft}>
             <View style={styles.areaBadge}>
@@ -185,7 +189,10 @@ export default function Home() {
               <Feather name="message-square" size={16} color={Colors.textSecondary} />
               <Text style={styles.actionIconText}>Comentario</Text>
            </TouchableOpacity>
-           <TouchableOpacity style={[styles.actionIconButton, styles.evidenceBg]}>
+           <TouchableOpacity 
+             style={[styles.actionIconButton, styles.evidenceBg]}
+             onPress={() => router.push({ pathname: '/evidence', params: { title: event.title } })}
+           >
               <Feather name="folder" size={16} color={Colors.paper} />
               <Text style={[styles.actionIconText, styles.textWhite]}>Evidencias</Text>
            </TouchableOpacity>
@@ -194,7 +201,7 @@ export default function Home() {
               <Text style={[styles.actionIconText, styles.textWhite]}>Novedades</Text>
            </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
