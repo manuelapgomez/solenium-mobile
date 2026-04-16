@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Shadows, Spacing, Radii } from '../constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -13,6 +14,13 @@ const MOCK_USERS: any = {
   electric: { name: 'Carlos Voltajes', role: 'worker', assignedArea: 'Eléctrica' },
   logistics: { name: 'Ana Entregas', role: 'worker', assignedArea: 'Logística' },
 };
+
+// Available Projects Set
+const MOCK_PROJECTS = [
+  { id: 'p1', name: 'Parque Solar Fase 1' },
+  { id: 'p2', name: 'Minigranja Norte' },
+  { id: 'p3', name: 'Minigranja Sur' },
+];
 
 const DAYS = [
   { day: 'Mon', date: '4' },
@@ -30,9 +38,10 @@ const TIMELINE_EVENTS = [
     type: 'registry',
     title: 'Check-In Facial',
     time: '7:00 AM',
-    subtitle: 'Registro validado en portería Norte',
+    subtitle: 'Registro validado en portería Principal',
     status: 'completed',
-    area: 'all'
+    area: 'all',
+    projectId: 'p1'
   },
   {
     id: 2,
@@ -43,11 +52,14 @@ const TIMELINE_EVENTS = [
     subtitle: 'Nivelación y fijación de soportes base.',
     status: 'completed',
     dayInfo: 'Día 2/5',
-    plannedProgress: 40,
-    actualProgress: 37,
-    yesterdayProgress: 17,
-    todayProgress: 20,
+    targetQuantity: 400,
+    unit: 'Paneles',
+    plannedProgress: 160,
+    actualProgress: 155,
+    yesterdayProgress: 55,
+    todayProgress: 100,
     filesCount: 10,
+    projectId: 'p1'
   },
   {
     id: 3,
@@ -58,11 +70,14 @@ const TIMELINE_EVENTS = [
     subtitle: 'Cableado de inversores centrales.',
     status: 'active',
     dayInfo: 'Día 1/3',
-    plannedProgress: 30,
-    actualProgress: 45,
+    targetQuantity: 60,
+    unit: 'Inversores',
+    plannedProgress: 20,
+    actualProgress: 27,
     yesterdayProgress: 0,
-    todayProgress: 45,
+    todayProgress: 27,
     filesCount: 5,
+    projectId: 'p1'
   },
   {
     id: 4,
@@ -71,7 +86,46 @@ const TIMELINE_EVENTS = [
     time: '6:00 PM',
     subtitle: 'Pendiente de registrar salida.',
     status: 'pending',
-    area: 'all'
+    area: 'all',
+    projectId: 'p1'
+  },
+  {
+    id: 5,
+    type: 'registry',
+    title: 'Check-In Facial',
+    time: '7:30 AM',
+    subtitle: 'Registro validado en acceso Norte',
+    status: 'completed',
+    area: 'all',
+    projectId: 'p2'
+  },
+  {
+    id: 6,
+    type: 'activity',
+    title: 'Cerramiento Perimetral',
+    area: 'Civil',
+    time: '9:00 AM',
+    subtitle: 'Instalación de malla en costado Este.',
+    status: 'active',
+    dayInfo: 'Día 3/7',
+    targetQuantity: 1000,
+    unit: 'Metros',
+    plannedProgress: 500,
+    actualProgress: 600,
+    yesterdayProgress: 400,
+    todayProgress: 200,
+    filesCount: 2,
+    projectId: 'p2'
+  },
+  {
+    id: 7,
+    type: 'registry',
+    title: 'Check-Out Salida',
+    time: '6:00 PM',
+    subtitle: 'Pendiente de registrar salida.',
+    status: 'pending',
+    area: 'all',
+    projectId: 'p2'
   },
 ];
 
@@ -79,6 +133,8 @@ export default function Home() {
   const router = useRouter();
   const { userId } = useLocalSearchParams();
   const [currentUser, setCurrentUser] = useState(MOCK_USERS.admin);
+  const [activeProject, setActiveProject] = useState(MOCK_PROJECTS[0]);
+  const [showProjectModal, setShowProjectModal] = useState(false);
 
   useEffect(() => {
     if (userId && MOCK_USERS[userId as string]) {
@@ -87,6 +143,9 @@ export default function Home() {
   }, [userId]);
 
   const filteredEvents = TIMELINE_EVENTS.filter(event => {
+    // Aislar por proyecto actual
+    if (event.projectId !== activeProject.id) return false;
+    // Permisos por Area/Rol
     if (event.type === 'registry' || currentUser.assignedArea === 'all') return true;
     return event.area === currentUser.assignedArea;
   });
@@ -99,11 +158,17 @@ export default function Home() {
   const renderDetailedCard = (event: any, isActive: boolean) => {
     const variance = event.actualProgress - event.plannedProgress;
     const isAhead = variance >= 0;
+    
+    // Dynamic quantitative metrics
+    const plannedPercent = (event.plannedProgress / event.targetQuantity) * 100;
+    const actualPercent = (event.actualProgress / event.targetQuantity) * 100;
+    const yesterdayPercent = (event.yesterdayProgress / event.targetQuantity) * 100;
+    const todayPercent = (event.todayProgress / event.targetQuantity) * 100;
 
     return (
       <TouchableOpacity 
         activeOpacity={0.8}
-        onPress={() => router.push({ pathname: '/evidence', params: { title: event.title } })}
+        onPress={() => router.push({ pathname: '/evidence', params: { title: event.title, targetQuantity: event.targetQuantity, unit: event.unit } })}
         style={[styles.detailedCard, isActive && Shadows.md]}
       >
         <View style={styles.detailedHeader}>
@@ -122,17 +187,18 @@ export default function Home() {
         <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>Avance programado</Text>
-            <Text style={styles.statValueBlue}>{event.plannedProgress}%</Text>
-            <Text style={styles.statSublabel}>(20% por día)</Text>
+            <Text style={styles.statValueBlue}>{event.plannedProgress}</Text>
+            <Text style={styles.statSublabel}>{event.unit}</Text>
           </View>
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>Avance real acumulado</Text>
             <View style={styles.valueWithVariance}>
-              <Text style={styles.statValueDark}>{event.actualProgress}%</Text>
+              <Text style={styles.statValueDark}>{event.actualProgress}</Text>
               <Text style={[styles.varianceText, { color: isAhead ? Colors.success : Colors.error }]}>
-                {isAhead ? `+${variance}%` : `${variance}%`}
+                {isAhead ? `+${variance}` : `${variance}`}
               </Text>
             </View>
+            <Text style={styles.statSublabel}>{event.unit}</Text>
           </View>
         </View>
 
@@ -140,24 +206,24 @@ export default function Home() {
         <View style={styles.breakdownRow}>
           <Text style={styles.breakdownTitle}>Desglose del día:</Text>
           <View style={styles.breakdownNumbers}>
-            <Text style={styles.breakdownText}>Ayer tenía: <Text style={styles.textBold}>{event.yesterdayProgress}%</Text></Text>
-            <Text style={styles.breakdownText}>Hoy avanzó: <Text style={styles.textBold}>+{event.todayProgress}%</Text></Text>
+            <Text style={styles.breakdownText}>Ayer tenía: <Text style={styles.textBold}>{event.yesterdayProgress} {event.unit}</Text></Text>
+            <Text style={styles.breakdownText}>Hoy avanzó: <Text style={styles.textBold}>+{event.todayProgress} {event.unit}</Text></Text>
           </View>
         </View>
 
         {/* MULTI-SEGMENT PROGRESS BAR */}
         <View style={styles.progressSection}>
            <View style={styles.progressInfo}>
-             <Text style={styles.progressLabel}>Progreso</Text>
-             <Text style={styles.progressValueText}>{event.actualProgress}% de 100%</Text>
+             <Text style={styles.progressLabel}>Progreso Total</Text>
+             <Text style={styles.progressValueText}>{event.actualProgress} de {event.targetQuantity} {event.unit}</Text>
            </View>
            <View style={styles.progressBarBg}>
              {/* Segment 1: Yesterday */}
-             <View style={[styles.progressSegmentPast, { width: `${event.yesterdayProgress}%` }]} />
+             <View style={[styles.progressSegmentPast, { width: `${yesterdayPercent}%` }]} />
              {/* Segment 2: Today */}
-             <View style={[styles.progressSegmentToday, { width: `${event.todayProgress}%`, left: `${event.yesterdayProgress}%` }]} />
+             <View style={[styles.progressSegmentToday, { width: `${todayPercent}%`, left: `${yesterdayPercent}%` }]} />
              {/* Marker: Expected */}
-             <View style={[styles.expectedMarker, { left: `${event.plannedProgress}%` }]} />
+             <View style={[styles.expectedMarker, { left: `${plannedPercent}%` }]} />
            </View>
            <View style={styles.progressLegend}>
               <View style={styles.legendItem}>
@@ -170,37 +236,34 @@ export default function Home() {
               </View>
               <View style={styles.legendItem}>
                 <View style={styles.legendLine} />
-                <Text style={styles.legendText}>Esperado ({event.plannedProgress}%)</Text>
+                <Text style={styles.legendText}>Esperado ({Math.round(plannedPercent)}%)</Text>
               </View>
            </View>
         </View>
 
-        {/* EVIDENCE STATUS */}
-        <View style={styles.evidenceBanner}>
-           <View style={styles.evidenceInner}>
-             <Feather name="check-circle" size={16} color={Colors.success} />
-             <Text style={styles.evidenceText}>{event.filesCount} ARCHIVOS ENVIADOS</Text>
+        {/* METRICS & SINGLE CTA ACTION */}
+        <View style={styles.metricsMiniRow}>
+           <View style={styles.metricItem}>
+              <Feather name="check-circle" size={12} color={Colors.success} />
+              <Text style={styles.metricText}>{event.filesCount} Archivos</Text>
            </View>
+           <View style={styles.metricItem}>
+              <Feather name="message-square" size={12} color={Colors.textSecondary} />
+              <Text style={styles.metricText}>3 Comentarios</Text>
+           </View>
+           <TouchableOpacity style={styles.metricItemWarning}>
+              <Feather name="alert-triangle" size={12} color={Colors.warning || '#F59E0B'} />
+              <Text style={styles.metricTextWarning}>Novedad Activa</Text>
+           </TouchableOpacity>
         </View>
 
-        {/* ACTION BUTTONS */}
-        <View style={styles.actionRow}>
-           <TouchableOpacity style={styles.actionIconButton}>
-              <Feather name="message-square" size={16} color={Colors.textSecondary} />
-              <Text style={styles.actionIconText}>Comentario</Text>
-           </TouchableOpacity>
-           <TouchableOpacity 
-             style={[styles.actionIconButton, styles.evidenceBg]}
-             onPress={() => router.push({ pathname: '/evidence', params: { title: event.title } })}
-           >
-              <Feather name="folder" size={16} color={Colors.paper} />
-              <Text style={[styles.actionIconText, styles.textWhite]}>Evidencias</Text>
-           </TouchableOpacity>
-           <TouchableOpacity style={[styles.actionIconButton, styles.noveltyBg]}>
-              <Feather name="alert-triangle" size={16} color={Colors.paper} />
-              <Text style={[styles.actionIconText, styles.textWhite]}>Novedades</Text>
-           </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+           style={styles.cardActionBtnPrimary}
+           onPress={() => router.push({ pathname: '/evidence', params: { title: event.title, targetQuantity: event.targetQuantity, unit: event.unit } })}
+        >
+           <Feather name="camera" size={16} color={Colors.paper} style={{ marginRight: 6 }} />
+           <Text style={styles.cardActionTextLight}>Registrar Avance / Evidencia</Text>
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   };
@@ -213,7 +276,11 @@ export default function Home() {
         <View style={styles.header}>
           <View style={styles.headerTop}>
             <View>
-                <Text style={styles.dateText}>Mayo 9, 2026</Text>
+                <TouchableOpacity onPress={() => setShowProjectModal(true)} style={styles.projectDropdownBtn}>
+                    <Feather name="map-pin" size={12} color={Colors.textSecondary} style={{marginRight: 6}} />
+                    <Text style={styles.projectDropdownText}>{activeProject.name}</Text>
+                    <Feather name="chevron-down" size={14} color={Colors.textPrimary} style={{marginLeft: 4}} />
+                </TouchableOpacity>
                 <TouchableOpacity onPress={toggleUser} style={styles.roleBadge}>
                     <Text style={styles.roleBadgeText}>
                         {currentUser.role === 'admin' ? 'Vista: ADMINISTRADOR' : `Área: ${currentUser.assignedArea}`}
@@ -272,36 +339,7 @@ export default function Home() {
                      <Text style={styles.registryTime}>{event.time}</Text>
                   </TouchableOpacity>
                 ) : (
-                  currentUser.role === 'admin' ? (
-                    renderDetailedCard(event, isActive)
-                  ) : (
-                    <TouchableOpacity 
-                    activeOpacity={0.7}
-                    onPress={() => router.push({ pathname: '/evidence', params: { title: event.title } })}
-                    style={[
-                      styles.card, 
-                      isActive ? styles.cardActive : styles.cardPending,
-                      isActive && Shadows.md
-                    ]}
-                  >
-                    <View style={styles.cardHeader}>
-                      <Text style={[styles.cardTitle, isActive && styles.textWhite]}>{event.title}</Text>
-                      <Text style={[styles.cardTime, isActive && styles.textWhiteAlpha]}>{event.time}</Text>
-                    </View>
-                    <Text style={[styles.cardSubtitle, isActive && styles.textWhiteAlpha]}>{event.subtitle}</Text>
-                    {isActive && (
-                      <View style={styles.cardActions}>
-                        <View style={styles.avatarsRow}>
-                           <View style={[styles.miniAvatar, { backgroundColor: '#FCA311', zIndex: 3 }]} />
-                           <View style={[styles.miniAvatar, { backgroundColor: '#51C18A', left: -8, zIndex: 2 }]} />
-                        </View>
-                        <View style={styles.actionBtn}>
-                          <Feather name="camera" size={16} color={Colors.primary} />
-                        </View>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                  )
+                  renderDetailedCard(event, isActive)
                 )}
               </View>
             );
@@ -328,6 +366,36 @@ export default function Home() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Project Switcher Modal */}
+      <Modal
+        visible={showProjectModal}
+        transparent={true}
+        animationType="fade"
+      >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowProjectModal(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Cambiar Proyecto Actual</Text>
+            {MOCK_PROJECTS.map((proj) => (
+              <TouchableOpacity 
+                key={proj.id} 
+                style={[styles.projectOption, activeProject.id === proj.id && styles.projectOptionActive]}
+                onPress={() => {
+                  setActiveProject(proj);
+                  setShowProjectModal(false);
+                }}
+              >
+                <Feather name="map-pin" size={16} color={activeProject.id === proj.id ? Colors.primary : Colors.textSecondary} />
+                <Text style={[styles.projectOptionText, activeProject.id === proj.id && styles.projectOptionTextActive]}>
+                  {proj.name}
+                </Text>
+                {activeProject.id === proj.id && <Feather name="check-circle" size={16} color={Colors.primary} style={{marginLeft: 'auto'}} />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -339,6 +407,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: Spacing.md,
+    paddingBottom: 110, // Avoid overlap with bottom nav
   },
   header: {
     paddingHorizontal: Spacing.xl,
@@ -372,10 +441,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dateText: {
+  projectDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  projectDropdownText: {
     fontSize: 14,
+    fontWeight: '700',
     color: Colors.textSecondary,
-    fontWeight: '500',
   },
   titleText: {
     fontSize: 28,
@@ -660,6 +734,20 @@ const styles = StyleSheet.create({
   progressSection: {
     marginBottom: Spacing.md,
   },
+  metricsMiniRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.md,
+    paddingTop: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  metricItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   progressInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -724,53 +812,39 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: Colors.textMuted,
   },
-  evidenceBanner: {
-    backgroundColor: '#ECFDF5',
-    padding: 10,
-    borderRadius: Radii.md,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: '#D1FAE5',
-  },
-  evidenceInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  evidenceText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.success,
-    marginLeft: 6,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionIconButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: Radii.md,
-    backgroundColor: Colors.background,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  actionIconText: {
-    fontSize: 11,
+  metricText: {
+    fontSize: 10,
     fontWeight: '700',
     color: Colors.textSecondary,
     marginLeft: 4,
   },
-  evidenceBg: {
-    backgroundColor: '#4B5563',
-    borderColor: '#4B5563',
+  metricItemWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  noveltyBg: {
-    backgroundColor: '#FF9500',
-    borderColor: '#FF9500',
+  metricTextWarning: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.warning || '#F59E0B',
+    marginLeft: 4,
+  },
+  cardActionBtnPrimary: {
+    flexDirection: 'row',
+    backgroundColor: Colors.primary,
+    paddingVertical: 14,
+    borderRadius: Radii.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
+  cardActionTextLight: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: Colors.paper,
   },
   bottomNavContainer: {
     position: 'absolute',

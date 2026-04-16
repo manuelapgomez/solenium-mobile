@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter } from 'expo-router';
@@ -101,13 +102,18 @@ export default function CalendarScreen() {
         
         {/* List of history logs (reusing style concepts from wireframes) */}
         <View style={styles.historyCard}>
-           <View style={styles.historyLeft}>
+            <View style={styles.historyLeft}>
               <View style={styles.iconCircle}>
                  <Feather name="calendar" size={16} color={Colors.textPrimary} />
               </View>
-              <View>
+              <View style={styles.historyTextCol}>
                  <Text style={styles.historyTitle}>Turno Completo</Text>
-                 <Text style={styles.historySubtitle}>Vie 8 Mayo • <Text style={{fontWeight:'700', color: Colors.success}}>Entrada 07:00 AM</Text> - <Text style={{fontWeight:'700', color: Colors.error}}>Salida 03:30 PM</Text></Text>
+                 <Text style={styles.historyDate}>Vie 8 Mayo</Text>
+                 <View style={styles.historyTimes}>
+                    <Text style={styles.timeIn}>In: 07:00 AM</Text>
+                    <Text style={styles.timeSep}> • </Text>
+                    <Text style={styles.timeOut}>Out: 03:30 PM</Text>
+                 </View>
               </View>
            </View>
            <Text style={styles.historyHours}>8.5 Hrs</Text>
@@ -118,9 +124,14 @@ export default function CalendarScreen() {
               <View style={[styles.iconCircle, { backgroundColor: Colors.warningLight }]}>
                  <Feather name="alert-circle" size={16} color={Colors.warning} />
               </View>
-              <View>
+              <View style={styles.historyTextCol}>
                  <Text style={styles.historyTitle}>Salida Anticipada</Text>
-                 <Text style={styles.historySubtitle}>Jue 7 Mayo • <Text style={{fontWeight:'700', color: Colors.success}}>Entrada 07:15 AM</Text> - <Text style={{fontWeight:'700', color: Colors.error}}>Salida 01:15 PM</Text></Text>
+                 <Text style={styles.historyDate}>Jue 7 Mayo</Text>
+                 <View style={styles.historyTimes}>
+                    <Text style={styles.timeIn}>In: 07:15 AM</Text>
+                    <Text style={styles.timeSep}> • </Text>
+                    <Text style={styles.timeOut}>Out: 01:15 PM</Text>
+                 </View>
               </View>
            </View>
            <Text style={styles.historyHours}>6.0 Hrs</Text>
@@ -160,7 +171,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.xl,
-    paddingBottom: Spacing.xxl * 2,
+    paddingBottom: 110,
   },
   monthSelector: {
     flexDirection: 'row',
@@ -284,10 +295,32 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.textPrimary,
   },
-  historySubtitle: {
-    fontSize: 12,
+  historyTextCol: {
+    flexShrink: 1,
+  },
+  historyDate: {
+    fontSize: 11,
     color: Colors.textSecondary,
     marginTop: 2,
+    marginBottom: 4,
+  },
+  historyTimes: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timeIn: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.success,
+  },
+  timeOut: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.error,
+  },
+  timeSep: {
+    fontSize: 11,
+    color: Colors.textMuted,
   },
   historyHours: {
     fontSize: 14,

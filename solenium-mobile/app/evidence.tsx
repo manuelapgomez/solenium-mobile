@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Dimensions, Image, Animated } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, Image, Animated } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+// Hardware APIs
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get('window');
-const IMG_SIZE = (width - 3) / 4; // 4 items per row with 1px border
+const IMG_SIZE = width / 4; // 4 items exact per row
 
 // Mock data
 const MOCK_PREVIOUS_EVIDENCE = {
@@ -35,14 +39,88 @@ const MOCK_GALLERY = [
 
 export default function EvidenceScreen() {
     const router = useRouter();
-    const { title } = useLocalSearchParams();
+    const { title, targetQuantity, unit } = useLocalSearchParams();
     
-    // Simulate fetching previous history
     const previousData = title === 'Montaje Estructura Metálica' ? MOCK_PREVIOUS_EVIDENCE : MOCK_PREVIOUS_EVIDENCE;
     
-    // States
-    const [progress, setProgress] = useState<number | null>(null);
-    const [selectedImage, setSelectedImage] = useState<string>(MOCK_GALLERY[0]);
+    // Hardware States
+    const [permission, requestPermission] = useCameraPermissions();
+    const cameraRef = useRef<CameraView>(null);
+    const insets = useSafeAreaInsets();
+
+    // App States
+    const [selectedImages, setSelectedImages] = useState<string[]>([]);
+    const [isMultiSelect, setIsMultiSelect] = useState<boolean>(false);
+
+    // Ask for permissions automatically
+    useEffect(() => {
+        if (!permission?.granted) {
+            requestPermission();
+        }
+    }, [permission]);
+
+    // Handle actual Native Camera capture
+    const takePicture = async () => {
+        if (cameraRef.current) {
+            const photo = await cameraRef.current.takePictureAsync();
+            if (photo) {
+                if (isMultiSelect) {
+                    setSelectedImages(prev => [...prev, photo.uri]);
+                } else {
+                    setSelectedImages([photo.uri]);
+                }
+            }
+        }
+    };
+
+    // Handle Native Device Gallery
+    const pickImageFromGallery = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ['images'],
+            allowsEditing: !isMultiSelect, // Cannot edit if multiple selection is enabled
+            allowsMultipleSelection: isMultiSelect,
+            aspect: [4, 3],
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            const uris = result.assets.map(a => a.uri);
+            if (isMultiSelect) {
+                setSelectedImages(prev => [...prev, ...uris]);
+            } else {
+                setSelectedImages([uris[0]]);
+            }
+        }
+    };
+
+    // Handle Mock Gallery Grid Selection
+    const handleSelectImageGrid = (img: string) => {
+        if (img === 'camera') {
+            if (!isMultiSelect) {
+                setSelectedImages([]);
+            }
+            return;
+        }
+
+        if (isMultiSelect) {
+            if (selectedImages.includes(img)) {
+                setSelectedImages(prev => prev.filter(i => i !== img));
+            } else {
+                setSelectedImages(prev => [...prev, img]);
+            }
+        } else {
+            setSelectedImages([img]);
+        }
+    };
+
+    const toggleMultiSelect = () => {
+        const nextState = !isMultiSelect;
+        setIsMultiSelect(nextState);
+        // Si se apaga y hay varias, solo se queda con la primera a menos que este empty
+        if (!nextState && selectedImages.length > 1) {
+            setSelectedImages([selectedImages[0]]);
+        }
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -52,47 +130,42 @@ export default function EvidenceScreen() {
                     <Feather name="x" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Nueva publicación</Text>
-                <TouchableOpacity onPress={() => router.back()} style={styles.headerActionBtn}>
+                <TouchableOpacity onPress={() => router.push({ pathname: '/audio_evidence', params: { title, targetQuantity, unit } })} style={styles.headerActionBtn}>
                     <Text style={styles.headerActionText}>Siguiente</Text>
                 </TouchableOpacity>
             </View>
 
             {/* Top Preview Section */}
             <View style={styles.previewContainer}>
-                <Image source={{ uri: selectedImage }} style={styles.previewImage} resizeMode="cover" />
-                
-                {/* Visual Camera Hint (Optional overly for the first image assuming it's the live camera placeholder) */}
-                {selectedImage === MOCK_GALLERY[0] && (
-                    <View style={styles.previewOverlay}>
-                        <View style={styles.cameraIconBg}>
-                            <Feather name="camera" size={28} color={Colors.textPrimary} />
+                {selectedImages.length === 0 ? (
+                    <CameraView style={styles.previewImage} facing="back" ref={cameraRef}>
+                        <View style={styles.previewOverlay}>
+                            {/* Live Camera Interface inside the box */}
+                            <TouchableOpacity style={styles.cameraTriggerBtn} onPress={takePicture}>
+                                <View style={styles.cameraTriggerInner} />
+                            </TouchableOpacity>
+                            <Text style={styles.previewHintText}>Toma la foto</Text>
                         </View>
-                        <Text style={styles.previewHintText}>Toca para capturar evidencia</Text>
-                    </View>
+                    </CameraView>
+                ) : (
+                    <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false} style={styles.previewImage}>
+                        {selectedImages.map((uri, idx) => (
+                            <View key={idx} style={{width: width, height: '100%', position: 'relative'}}>
+                                <Image source={{ uri }} style={styles.previewImage} resizeMode="cover" />
+                                {selectedImages.length > 1 && (
+                                    <View style={styles.multiPageIndicator}>
+                                        <Text style={styles.multiPageText}>{idx + 1} / {selectedImages.length}</Text>
+                                    </View>
+                                )}
+                            </View>
+                        ))}
+                    </ScrollView>
                 )}
             </View>
 
             {/* Bottom Section (Overlaid progress & gallery) */}
             <View style={styles.bottomSection}>
                 
-                {/* Overlaid Progress Card */}
-                <View style={styles.progressCardWrapper}>
-                    <View style={styles.progressCard}>
-                        <Text style={styles.progressCardTitle}>¿CUÁNTO AVANZAMOS?</Text>
-                        <View style={styles.progressButtonsRow}>
-                            {[25, 50, 75, 100].map(val => (
-                                <TouchableOpacity 
-                                    key={val}
-                                    style={[styles.progressPill, progress === val && styles.progressPillActive]}
-                                    onPress={() => setProgress(val)}
-                                >
-                                    <Text style={[styles.progressPillText, progress === val && styles.textWhite]}>{val}%</Text>
-                                </TouchableOpacity>
-                            ))}
-                        </View>
-                    </View>
-                </View>
-
                 {/* Layout Container for below the overlapped card */}
                 <View style={styles.lowerContent}>
                     
@@ -121,30 +194,44 @@ export default function EvidenceScreen() {
 
                     {/* Gallery Tools Header */}
                     <View style={styles.galleryHeaderRow}>
-                        <TouchableOpacity style={styles.recentDropdown}>
+                        {/* Native App Image Picker Trigger */}
+                        <TouchableOpacity style={styles.recentDropdown} onPress={pickImageFromGallery}>
                             <Text style={styles.recentText}>Recientes</Text>
                             <Feather name="chevron-down" size={20} color={Colors.textPrimary} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.selectBtn}>
-                            <Feather name="copy" size={14} color={Colors.textSecondary} />
-                            <Text style={styles.selectBtnText}>Seleccionar</Text>
+                        <TouchableOpacity style={[styles.selectBtn, isMultiSelect && styles.selectBtnActive]} onPress={toggleMultiSelect}>
+                            <Feather name="copy" size={14} color={isMultiSelect ? Colors.paper : Colors.textSecondary} />
+                            <Text style={[styles.selectBtnText, isMultiSelect && styles.selectBtnTextActive]}>Selección múltiple</Text>
                         </TouchableOpacity>
                     </View>
 
                     {/* Gallery Grid */}
-                    <ScrollView contentContainerStyle={styles.gridContainer} showsVerticalScrollIndicator={false}>
+                    <ScrollView contentContainerStyle={[styles.gridContainer, { paddingBottom: insets.bottom + 130 }]} showsVerticalScrollIndicator={false}>
                         {/* Live Camera Grid Item First */}
-                        <TouchableOpacity style={styles.gridCameraCell}>
+                        <TouchableOpacity style={styles.gridCameraCell} onPress={() => handleSelectImageGrid('camera')}>
                             <Feather name="camera" size={24} color={Colors.paper} />
                         </TouchableOpacity>
                         
                         {/* Standard Gallery Images */}
-                        {MOCK_GALLERY.map((img, idx) => (
-                            <TouchableOpacity key={idx} style={styles.gridImageCell} onPress={() => setSelectedImage(img)}>
-                                <Image source={{ uri: img }} style={styles.gridImage} />
-                                {selectedImage === img && <View style={styles.gridImageSelectedOverlay} />}
-                            </TouchableOpacity>
-                        ))}
+                        {MOCK_GALLERY.map((img, idx) => {
+                            const isSelected = selectedImages.includes(img);
+                            const selectionIndex = selectedImages.indexOf(img) + 1;
+                            
+                            return (
+                                <TouchableOpacity key={idx} style={styles.gridImageCell} onPress={() => handleSelectImageGrid(img)} activeOpacity={0.8}>
+                                    <Image source={{ uri: img }} style={styles.gridImage} />
+                                    {isSelected && (
+                                        <View style={styles.gridImageSelectedOverlay}>
+                                            {isMultiSelect && (
+                                                <View style={styles.selectionBadge}>
+                                                    <Text style={styles.selectionBadgeText}>{selectionIndex}</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
+                                </TouchableOpacity>
+                            );
+                        })}
                         <View style={{ width: '100%', height: 40 }} />
                     </ScrollView>
                 </View>
@@ -196,20 +283,29 @@ const styles = StyleSheet.create({
   previewOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-end',
+    paddingBottom: Spacing.md, 
   },
-  cameraIconBg: {
+  cameraTriggerBtn: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderWidth: 4,
+    borderColor: Colors.paper,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.sm,
+    ...Shadows.md,
+  },
+  cameraTriggerInner: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: Colors.paper,
   },
   previewHintText: {
     color: Colors.paper,
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowRadius: 4,
@@ -219,62 +315,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.paper,
     position: 'relative',
   },
-  progressCardWrapper: {
-    position: 'absolute',
-    top: -35, // Overlap the preview
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  progressCard: {
-    width: '90%',
-    backgroundColor: Colors.paper,
-    borderRadius: Radii.xl,
-    padding: Spacing.md,
-    ...Shadows.lg,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  progressCardTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.textSecondary,
-    marginBottom: Spacing.md,
-    textTransform: 'uppercase',
-  },
-  progressButtonsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  progressPill: {
-    flex: 1,
-    height: 44,
-    marginHorizontal: 4,
-    borderRadius: Radii.md,
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  progressPillActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  progressPillText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-  },
   textWhite: {
     color: Colors.paper,
   },
   lowerContent: {
     flex: 1,
-    paddingTop: 70, // Space for the overlapping card
+    paddingTop: Spacing.md, 
   },
   historySection: {
     paddingHorizontal: Spacing.lg,
@@ -365,17 +411,17 @@ const styles = StyleSheet.create({
   gridCameraCell: {
     width: IMG_SIZE,
     height: IMG_SIZE,
-    marginRight: 1,
-    marginBottom: 1,
     backgroundColor: '#1E293B',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: Colors.background,
   },
   gridImageCell: {
     width: IMG_SIZE,
     height: IMG_SIZE,
-    marginRight: 1,
-    marginBottom: 1,
+    borderWidth: 0.5,
+    borderColor: Colors.background,
   },
   gridImage: {
     width: '100%',
@@ -386,5 +432,43 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.4)',
     borderWidth: 2,
     borderColor: 'rgba(255,255,255,0.8)',
+  },
+  selectBtnActive: {
+    backgroundColor: Colors.primary,
+  },
+  selectBtnTextActive: {
+    color: Colors.paper,
+  },
+  multiPageIndicator: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: Radii.full,
+  },
+  multiPageText: {
+    color: Colors.paper,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  selectionBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.paper,
+  },
+  selectionBadgeText: {
+    color: Colors.paper,
+    fontSize: 10,
+    fontWeight: '800',
   }
 });

@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter } from 'expo-router';
@@ -34,7 +35,7 @@ export default function ProfileScreen() {
         <View style={styles.syncCard}>
           <View style={styles.syncLeft}>
             <Feather name="cloud-off" size={20} color={Colors.warning} />
-            <Text style={styles.syncText}>2 Registros sin sincronizar</Text>
+            <Text style={styles.syncText}>2 Faltan por subir</Text>
           </View>
           <TouchableOpacity style={styles.syncBtn}>
             <Text style={styles.syncBtnText}>Sincronizar</Text>
@@ -109,6 +110,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: Spacing.xl,
+    paddingBottom: 110,
   },
   userCard: {
     flexDirection: 'row',
@@ -157,6 +159,7 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.sm,
     color: Colors.warning,
     fontWeight: '600',
+    flexShrink: 1,
   },
   syncBtn: {
     backgroundColor: Colors.paper,

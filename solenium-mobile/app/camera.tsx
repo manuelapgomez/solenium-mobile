@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions, ImageBackground, Animated } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter } from 'expo-router';
+// Hardware camera
+import { CameraView, useCameraPermissions } from 'expo-camera';
 
 const { width, height } = Dimensions.get('window');
 
 export default function CameraScreen() {
   const router = useRouter();
+  const [permission, requestPermission] = useCameraPermissions();
   const [scanStatus, setScanStatus] = useState('scanning'); // scanning, success
   const scanAnim = new Animated.Value(0);
 
   useEffect(() => {
+    if (!permission?.granted) {
+      requestPermission();
+    }
+
     // Simulate high-speed scanning pulse
     Animated.loop(
       Animated.sequence([
@@ -26,19 +34,18 @@ export default function CameraScreen() {
     }, 3500);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [permission, scanAnim]);
 
   const isSuccess = scanStatus === 'success';
 
   return (
     <View style={styles.container}>
-      {/* Real Camera Background Mockup */}
-      <ImageBackground 
-        source={require('../assets/images/worker_face.png')} 
+      {/* Real Front Camera Feed */}
+      <CameraView 
+        facing="front"
         style={styles.cameraBackground}
-        resizeMode="cover"
       >
-        {/* Dark inmersive Overlay */}
+        {/* Dark immersive Overlay */}
         <View style={styles.darkOverlay}>
           
           {/* Header */}
@@ -119,7 +126,7 @@ export default function CameraScreen() {
           </SafeAreaView>
 
         </View>
-      </ImageBackground>
+      </CameraView>
     </View>
   );
 }
@@ -136,7 +143,7 @@ const styles = StyleSheet.create({
   },
   darkOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)', // subtle darkness to pop UI
+    backgroundColor: 'rgba(0,0,0,0.5)', // slightly darker to make white HUD elements pop against bright selfie camera
     justifyContent: 'space-between',
   },
   safeHeader: {
@@ -248,21 +255,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  confirmBtn: {
-    backgroundColor: Colors.success,
-    height: 60,
-    borderRadius: Radii.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.lg,
-  },
-  confirmBtnText: {
-    color: Colors.paper,
-    fontSize: 18,
-    fontWeight: '800',
-    marginRight: Spacing.sm,
-  },
   timestampBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -308,7 +300,7 @@ const styles = StyleSheet.create({
   },
   confirmBtnSalida: {
     flex: 1,
-    backgroundColor: Colors.error, // Red/Orange for exit
+    backgroundColor: Colors.error, 
     height: 60,
     borderRadius: Radii.md,
     flexDirection: 'row',
