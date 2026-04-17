@@ -16,14 +16,8 @@ const generateMockMonth = () => {
   }
   for (let i = 1; i <= 31; i++) {
      const isToday = i === 9; // Let's say today is 9
-     
-     // Mock logic to populate semaphore statuses
-     let status = 'upcoming';
-     if (isToday) status = 'active';
-     else if (i === 6) status = 'missing'; // Rojo
-     else if (i === 7) status = 'incomplete'; // Naranja
-     else if (i < 9) status = 'completed'; // Verde
-     
+     // random logic to populate work status
+     const status = i < 9 && i > 3 ? 'worked' : (i === 9 ? 'active' : 'upcoming');
      days.push({ id: `d${i}`, number: i, empty: false, status, isToday });
   }
   return days;
@@ -31,33 +25,7 @@ const generateMockMonth = () => {
 
 export default function CalendarScreen() {
   const router = useRouter();
-  const [selectedDay, setSelectedDay] = React.useState(9); // Default to today
   const monthDays = generateMockMonth();
-
-  const MOCK_DAILY_AGENDA: any = {
-    9: [
-      { id: 101, title: 'Check-In Facial', time: '07:05 AM', type: 'registry', status: 'In' },
-      { id: 102, title: 'Montaje Estructuras', time: '08:00 AM', type: 'activity', detail: '40 Paneles' },
-    ],
-    8: [
-       { id: 201, title: 'Check-In Facial', time: '06:55 AM', type: 'registry', status: 'In' },
-       { id: 202, title: 'Cimentación Postes', time: '07:30 AM', type: 'activity', detail: '12 Postes' },
-       { id: 203, title: 'Check-Out Salida', time: '04:00 PM', type: 'registry', status: 'Out' },
-    ],
-    7: [
-       { id: 301, title: 'Check-In Facial', time: '07:10 AM', type: 'registry', status: 'In' },
-       { id: 302, title: 'Cableado DC', time: '08:00 AM', type: 'activity', detail: 'Zanjas Sector Sur' },
-       // Note: Missing Check-Out implies an incomplete day (orange) or missing registry (red).
-       // We'll inject the alert directly in the UI if the day status is missing.
-    ],
-    6: [
-       { id: 401, title: 'Check-In Facial', time: '06:50 AM', type: 'registry', status: 'In' },
-       { id: 402, title: 'Instalación Inversores', time: '09:00 AM', type: 'activity', detail: 'Plataforma B' },
-    ]
-  };
-
-  const selectedDayData = monthDays.find(d => d.number === selectedDay);
-  const currentAgenda = MOCK_DAILY_AGENDA[selectedDay] || [];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -112,91 +80,62 @@ export default function CalendarScreen() {
                  let cellStyle = null;
                  let textStyle = null;
 
-                 if (day.status === 'completed') {
+                 if (day.status === 'worked') {
                     cellStyle = { backgroundColor: Colors.successLight };
-                    textStyle = { color: Colors.success, fontWeight: '800' };
-                 } else if (day.status === 'missing') {
-                    cellStyle = { backgroundColor: Colors.errorLight };
-                    textStyle = { color: Colors.error, fontWeight: '800' };
-                 } else if (day.status === 'incomplete') {
-                    cellStyle = { backgroundColor: Colors.warningLight };
-                    textStyle = { color: '#B45309', fontWeight: '800' };
+                    textStyle = { color: Colors.success, fontWeight: '700' };
                  } else if (day.isToday) {
                     cellStyle = { backgroundColor: Colors.primary };
                     textStyle = { color: Colors.paper, fontWeight: '800' };
-                 } 
+                 }
 
                  return (
-                    <TouchableOpacity 
-                        key={day.id} 
-                        style={[
-                            styles.dayCell, 
-                            cellStyle,
-                            day.number === selectedDay && !day.isToday && { borderWidth: 2, borderColor: Colors.primary }
-                        ]}
-                        onPress={() => setSelectedDay(day.number)}
-                    >
+                    <View key={day.id} style={[styles.dayCell, cellStyle]}>
                        <Text style={[styles.dayText, textStyle]}>{day.number}</Text>
                        {day.status === 'worked' && <View style={styles.workedDot} />}
-                    </TouchableOpacity>
+                    </View>
                  );
               })}
            </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Agenda Ejecutada - {selectedDay} Mayo</Text>
+        <Text style={styles.sectionTitle}>Historial del mes</Text>
         
-        {/* Missing Registry Injection */}
-        {selectedDayData?.status === 'missing' && (
-            <View style={styles.missingAlertCard}>
-                <Feather name="alert-triangle" size={24} color={Colors.error} style={{marginRight: Spacing.md}} />
-                <View style={{flex: 1}}>
-                    <Text style={styles.missingAlertTitle}>DÍA INCOMPLETO</Text>
-                    <Text style={styles.missingAlertDesc}>Falta el registro de SALIDA en este día. Contacta con RRHH.</Text>
-                </View>
-            </View>
-        )}
-        {selectedDayData?.status === 'incomplete' && (
-            <View style={[styles.missingAlertCard, { backgroundColor: Colors.warningLight, borderColor: 'rgba(245, 158, 11, 0.3)' }]}>
-                <Feather name="clock" size={24} color={'#B45309'} style={{marginRight: Spacing.md}} />
-                <View style={{flex: 1}}>
-                    <Text style={[styles.missingAlertTitle, {color: '#B45309'}]}>HORAS INCOMPLETAS</Text>
-                    <Text style={[styles.missingAlertDesc, {color: '#B45309'}]}>Registraste 6.5 Hrs de las 8 Hrs esperadas para este turno.</Text>
-                </View>
-            </View>
-        )}
+        {/* List of history logs (reusing style concepts from wireframes) */}
+        <View style={styles.historyCard}>
+            <View style={styles.historyLeft}>
+              <View style={styles.iconCircle}>
+                 <Feather name="calendar" size={16} color={Colors.textPrimary} />
+              </View>
+              <View style={styles.historyTextCol}>
+                 <Text style={styles.historyTitle}>Turno Completo</Text>
+                 <Text style={styles.historyDate}>Vie 8 Mayo</Text>
+                 <View style={styles.historyTimes}>
+                    <Text style={styles.timeIn}>In: 07:00 AM</Text>
+                    <Text style={styles.timeSep}> • </Text>
+                    <Text style={styles.timeOut}>Out: 03:30 PM</Text>
+                 </View>
+              </View>
+           </View>
+           <Text style={styles.historyHours}>8.5 Hrs</Text>
+        </View>
 
-        {currentAgenda.length > 0 ? (
-            currentAgenda.map((item: any) => (
-                <View key={item.id} style={styles.historyCard}>
-                    <View style={styles.historyLeft}>
-                        <View style={[styles.iconCircle, item.type === 'registry' && { backgroundColor: Colors.primaryLight }]}>
-                            <Feather 
-                                name={item.type === 'registry' ? 'shield' : (item.type === 'activity' ? 'tool' : 'coffee')} 
-                                size={16} 
-                                color={item.type === 'registry' ? Colors.primary : Colors.textPrimary} 
-                            />
-                        </View>
-                        <View style={styles.historyTextCol}>
-                            <Text style={styles.historyTitle}>{item.title}</Text>
-                            <Text style={styles.historyDate}>{item.time} {item.detail ? `• ${item.detail}` : ''}</Text>
-                        </View>
-                    </View>
-                    {item.status && (
-                        <View style={[styles.statusBadgeSmall, { backgroundColor: item.status === 'In' ? Colors.successLight : Colors.errorLight }]}>
-                            <Text style={[styles.statusBadgeTextSmall, { color: item.status === 'In' ? Colors.success : Colors.error }]}>
-                                {item.status}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-            ))
-        ) : (
-            <View style={styles.emptyState}>
-                <Feather name="info" size={24} color={Colors.textMuted} />
-                <Text style={styles.emptyStateText}>No hay datos registrados para este día.</Text>
-            </View>
-        )}
+        <View style={styles.historyCard}>
+           <View style={styles.historyLeft}>
+              <View style={[styles.iconCircle, { backgroundColor: Colors.warningLight }]}>
+                 <Feather name="alert-circle" size={16} color={Colors.warning} />
+              </View>
+              <View style={styles.historyTextCol}>
+                 <Text style={styles.historyTitle}>Salida Anticipada</Text>
+                 <Text style={styles.historyDate}>Jue 7 Mayo</Text>
+                 <View style={styles.historyTimes}>
+                    <Text style={styles.timeIn}>In: 07:15 AM</Text>
+                    <Text style={styles.timeSep}> • </Text>
+                    <Text style={styles.timeOut}>Out: 01:15 PM</Text>
+                 </View>
+              </View>
+           </View>
+           <Text style={styles.historyHours}>6.0 Hrs</Text>
+        </View>
 
       </ScrollView>
     </SafeAreaView>
@@ -387,48 +326,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: Colors.primary,
-  },
-  statusBadgeSmall: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  statusBadgeTextSmall: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  emptyState: {
-    padding: Spacing.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.paper,
-    borderRadius: Radii.md,
-    marginTop: Spacing.md,
-  },
-  emptyStateText: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  missingAlertCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.errorLight,
-    padding: Spacing.md,
-    borderRadius: Radii.md,
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  missingAlertTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: Colors.error,
-    marginBottom: 2,
-  },
-  missingAlertDesc: {
-    fontSize: 12,
-    color: Colors.error,
   }
 });

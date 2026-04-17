@@ -4,20 +4,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Modal, TouchableWithoutFeedback, ScrollView } from 'react-native';
-
-const MOCK_PROJECTS = [
-  { id: 'p1', name: 'Parque Solar Fase 1' },
-  { id: 'p2', name: 'Minigranja Norte' },
-  { id: 'p3', name: 'Minigranja Sur' },
-];
 
 export default function RegistryDetailScreen() {
   const router = useRouter();
-  const { title, time, projectName } = useLocalSearchParams();
-  const [activeProjectName, setActiveProjectName] = React.useState(projectName?.toString() || 'Parque Solar Fase 1');
-  const [showProjectModal, setShowProjectModal] = React.useState(false);
+  const { title, time } = useLocalSearchParams();
   
+  // Simulated project and photo data
+  const projectName = "Parque Solar Solenium - Fase 1";
   const isExit = title?.toString().toLowerCase().includes('out') || title?.toString().toLowerCase().includes('salida');
 
   return (
@@ -50,20 +43,10 @@ export default function RegistryDetailScreen() {
 
         {/* INFO CARD */}
         <View style={styles.infoCard}>
-           <TouchableOpacity 
-             style={styles.projectSection}
-             onPress={() => setShowProjectModal(true)}
-             activeOpacity={0.7}
-           >
-              <View style={{flex: 1}}>
-                <Text style={styles.label}>PROYECTO</Text>
-                <Text style={styles.projectValue}>{activeProjectName}</Text>
-              </View>
-              <View style={styles.changeBadge}>
-                 <Text style={styles.changeText}>CAMBIAR</Text>
-                 <Feather name="chevron-down" size={12} color={Colors.primary} />
-              </View>
-           </TouchableOpacity>
+           <View style={styles.projectSection}>
+              <Text style={styles.label}>PROYECTO</Text>
+              <Text style={styles.projectValue}>{projectName}</Text>
+           </View>
            
            <View style={styles.divider} />
 
@@ -95,35 +78,6 @@ export default function RegistryDetailScreen() {
            <Text style={styles.closeBtnText}>Cerrar Detalle</Text>
         </TouchableOpacity>
       </SafeAreaView>
-
-      {/* Project Switcher Modal */}
-      <Modal
-        visible={showProjectModal}
-        transparent={true}
-        animationType="fade"
-      >
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowProjectModal(false)}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Seleccionar Proyecto</Text>
-            {MOCK_PROJECTS.map((proj) => (
-              <TouchableOpacity 
-                key={proj.id} 
-                style={[styles.projectOption, activeProjectName === proj.name && styles.projectOptionActive]}
-                onPress={() => {
-                  setActiveProjectName(proj.name);
-                  setShowProjectModal(false);
-                }}
-              >
-                <Feather name="map-pin" size={16} color={activeProjectName === proj.name ? Colors.primary : Colors.textSecondary} />
-                <Text style={[styles.projectOptionText, activeProjectName === proj.name && styles.projectOptionTextActive]}>
-                  {proj.name}
-                </Text>
-                {activeProjectName === proj.name && <Feather name="check-circle" size={16} color={Colors.primary} style={{marginLeft: 'auto'}} />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </TouchableOpacity>
-      </Modal>
     </View>
   );
 }
@@ -261,64 +215,5 @@ const styles = StyleSheet.create({
     color: Colors.paper,
     fontSize: 16,
     fontWeight: '800',
-  },
-  projectSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  changeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  changeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.primary,
-    marginRight: 4,
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
-  },
-  modalContent: {
-    width: '100%',
-    backgroundColor: Colors.paper,
-    borderRadius: Radii.lg,
-    padding: Spacing.xl,
-    ...Shadows.lg,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    marginBottom: Spacing.lg,
-  },
-  projectOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
-  },
-  projectOptionActive: {
-    backgroundColor: 'rgba(56, 189, 248, 0.05)',
-  },
-  projectOptionText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-    marginLeft: Spacing.md,
-  },
-  projectOptionTextActive: {
-    color: Colors.textPrimary,
-    fontWeight: '700',
-  },
+  }
 });

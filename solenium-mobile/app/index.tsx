@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, TextInput, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Shadows, Spacing, Radii } from '../constants/theme';
@@ -9,11 +9,19 @@ const { width } = Dimensions.get('window');
 
 // Role System Mock Data
 const MOCK_USERS: any = {
-  admin: { name: 'Admin Solenium', role: 'admin', assignedArea: 'all' },
-  civil: { name: 'Juan Cimentaciones', role: 'worker', assignedArea: 'Civil' },
-  electric: { name: 'Carlos Voltajes', role: 'worker', assignedArea: 'Eléctrica' },
-  logistics: { name: 'Ana Entregas', role: 'worker', assignedArea: 'Logística' },
+  admin: { id: 'admin', name: 'Admin Solenium', role: 'admin', assignedArea: 'all', avatar: 'AS' },
+  civil: { id: 'civil', name: 'Juan Cimentaciones', role: 'worker', assignedArea: 'Civil', avatar: 'JC' },
+  electric: { id: 'electric', name: 'Carlos Voltajes', role: 'worker', assignedArea: 'Eléctrica', avatar: 'CV' },
+  logistics: { id: 'logistics', name: 'Ana Entregas', role: 'worker', assignedArea: 'Logística', avatar: 'AE' },
 };
+
+const INCIDENT_TYPES = [
+    { id: 'lluvia', label: 'Lluvia', icon: 'cloud-rain', color: '#3B82F6' },
+    { id: 'clima', label: 'Condiciones Climáticas', icon: 'wind', color: '#6366F1' },
+    { id: 'suministros', label: 'Falta de Suministros', icon: 'package', color: '#F59E0B' },
+    { id: 'tecnica', label: 'Interferencia Técnica', icon: 'tool', color: '#10B981' },
+    { id: 'otros', label: 'Otros', icon: 'more-horizontal', color: '#6B7280' },
+];
 
 // Available Projects Set
 const MOCK_PROJECTS = [
@@ -23,13 +31,13 @@ const MOCK_PROJECTS = [
 ];
 
 const DAYS = [
-  { day: 'Mon', date: '4' },
-  { day: 'Tue', date: '5' },
-  { day: 'Wed', date: '6' },
-  { day: 'Thu', date: '7' },
-  { day: 'Fri', date: '8' },
-  { day: 'Sat', date: '9', active: true },
-  { day: 'Sun', date: '10' },
+  { day: 'Mon', date: '4', status: 'completed' },
+  { day: 'Tue', date: '5', status: 'completed' },
+  { day: 'Wed', date: '6', status: 'missing' },     // Rojo: Falta registro crítico
+  { day: 'Thu', date: '7', status: 'incomplete' },  // Naranja: Faltan horas
+  { day: 'Fri', date: '8', status: 'active' },      // Hoy
+  { day: 'Sat', date: '9', status: 'upcoming', active: true },
+  { day: 'Sun', date: '10', status: 'upcoming' },
 ];
 
 const TIMELINE_EVENTS = [
@@ -84,8 +92,8 @@ const TIMELINE_EVENTS = [
     type: 'registry',
     title: 'Check-Out Salida',
     time: '6:00 PM',
-    subtitle: 'Pendiente de registrar salida.',
-    status: 'pending',
+    subtitle: 'Olvidaste registrar salida ayer.',
+    status: 'missing',
     area: 'all',
     projectId: 'p1'
   },
@@ -132,9 +140,31 @@ const TIMELINE_EVENTS = [
 export default function Home() {
   const router = useRouter();
   const { userId } = useLocalSearchParams();
+
+  useEffect(() => {
+    // If no user is authenticated, redirect to the friendly login screen
+    if (!userId) {
+      router.replace('/login');
+    }
+  }, [userId]);
   const [currentUser, setCurrentUser] = useState(MOCK_USERS.admin);
   const [activeProject, setActiveProject] = useState(MOCK_PROJECTS[0]);
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const [pendingRegistry, setPendingRegistry] = useState<any>(null);
+
+  // Mock states for UX alerts
+  const [hasSyncPending, setHasSyncPending] = useState(true);
+
+  // States for Modals
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [showIncidentModal, setShowIncidentModal] = useState(false);
+  const [selectedEventItem, setSelectedEventItem] = useState<any>(null);
+  
+  // Incident specific state
+  const [selectedIncidentType, setSelectedIncidentType] = useState<string | null>(null);
+  const [customIncidentName, setCustomIncidentName] = useState('');
+  const [tempIncidents, setTempIncidents] = useState<any[]>(INCIDENT_TYPES);
 
   useEffect(() => {
     if (userId && MOCK_USERS[userId as string]) {
@@ -166,105 +196,78 @@ export default function Home() {
     const todayPercent = (event.todayProgress / event.targetQuantity) * 100;
 
     return (
-      <TouchableOpacity 
-        activeOpacity={0.8}
-        onPress={() => router.push({ pathname: '/evidence', params: { title: event.title, targetQuantity: event.targetQuantity, unit: event.unit } })}
-        style={[styles.detailedCard, isActive && Shadows.md]}
-      >
-        <View style={styles.detailedHeader}>
-          <View style={styles.detailedHeaderLeft}>
-            <View style={styles.areaBadge}>
-               <Text style={styles.areaBadgeText}>{event.area.toUpperCase()}</Text>
-            </View>
-            <Text style={styles.detailedTitle}>{event.title}</Text>
-          </View>
-          <View style={styles.dayBadge}>
-            <Text style={styles.dayBadgeText}>{event.dayInfo}</Text>
-          </View>
-        </View>
-
-        {/* COMPARISON STATS */}
-        <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Avance programado</Text>
-            <Text style={styles.statValueBlue}>{event.plannedProgress}</Text>
-            <Text style={styles.statSublabel}>{event.unit}</Text>
-          </View>
-          <View style={styles.statBox}>
-            <Text style={styles.statLabel}>Avance real acumulado</Text>
-            <View style={styles.valueWithVariance}>
-              <Text style={styles.statValueDark}>{event.actualProgress}</Text>
-              <Text style={[styles.varianceText, { color: isAhead ? Colors.success : Colors.error }]}>
-                {isAhead ? `+${variance}` : `${variance}`}
-              </Text>
-            </View>
-            <Text style={styles.statSublabel}>{event.unit}</Text>
-          </View>
-        </View>
-
-        {/* DAY BREAKDOWN */}
-        <View style={styles.breakdownRow}>
-          <Text style={styles.breakdownTitle}>Desglose del día:</Text>
-          <View style={styles.breakdownNumbers}>
-            <Text style={styles.breakdownText}>Ayer tenía: <Text style={styles.textBold}>{event.yesterdayProgress} {event.unit}</Text></Text>
-            <Text style={styles.breakdownText}>Hoy avanzó: <Text style={styles.textBold}>+{event.todayProgress} {event.unit}</Text></Text>
-          </View>
-        </View>
-
-        {/* MULTI-SEGMENT PROGRESS BAR */}
-        <View style={styles.progressSection}>
-           <View style={styles.progressInfo}>
-             <Text style={styles.progressLabel}>Progreso Total</Text>
-             <Text style={styles.progressValueText}>{event.actualProgress} de {event.targetQuantity} {event.unit}</Text>
-           </View>
-           <View style={styles.progressBarBg}>
-             {/* Segment 1: Yesterday */}
-             <View style={[styles.progressSegmentPast, { width: `${yesterdayPercent}%` }]} />
-             {/* Segment 2: Today */}
-             <View style={[styles.progressSegmentToday, { width: `${todayPercent}%`, left: `${yesterdayPercent}%` }]} />
-             {/* Marker: Expected */}
-             <View style={[styles.expectedMarker, { left: `${plannedPercent}%` }]} />
-           </View>
-           <View style={styles.progressLegend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#F87171' }]} />
-                <Text style={styles.legendText}>Días anteriores</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#4B5563' }]} />
-                <Text style={styles.legendText}>Hoy</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={styles.legendLine} />
-                <Text style={styles.legendText}>Esperado ({Math.round(plannedPercent)}%)</Text>
-              </View>
-           </View>
-        </View>
-
-        {/* METRICS & SINGLE CTA ACTION */}
-        <View style={styles.metricsMiniRow}>
-           <View style={styles.metricItem}>
-              <Feather name="check-circle" size={12} color={Colors.success} />
-              <Text style={styles.metricText}>{event.filesCount} Archivos</Text>
-           </View>
-           <View style={styles.metricItem}>
-              <Feather name="message-square" size={12} color={Colors.textSecondary} />
-              <Text style={styles.metricText}>3 Comentarios</Text>
-           </View>
-           <TouchableOpacity style={styles.metricItemWarning}>
-              <Feather name="alert-triangle" size={12} color={Colors.warning || '#F59E0B'} />
-              <Text style={styles.metricTextWarning}>Novedad Activa</Text>
-           </TouchableOpacity>
-        </View>
-
+      <View style={[styles.detailedCard, isActive && Shadows.md]}>
+        {/* TOP: Clickable Header/Progress Area opens Details Modal */}
         <TouchableOpacity 
-           style={styles.cardActionBtnPrimary}
-           onPress={() => router.push({ pathname: '/evidence', params: { title: event.title, targetQuantity: event.targetQuantity, unit: event.unit } })}
+          activeOpacity={0.8}
+          onPress={() => {
+              setSelectedEventItem(event);
+              setShowDetailsModal(true);
+          }}
         >
-           <Feather name="camera" size={16} color={Colors.paper} style={{ marginRight: 6 }} />
-           <Text style={styles.cardActionTextLight}>Registrar Avance / Evidencia</Text>
+            <View style={styles.detailedHeader}>
+            <View style={styles.detailedHeaderLeft}>
+                <View style={styles.areaBadge}>
+                <Text style={styles.areaBadgeText}>{event.area.toUpperCase()}</Text>
+                </View>
+                 <Text style={styles.detailedTitle}>{event.title}</Text>
+             </View>
+             <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <TouchableOpacity 
+                    style={styles.emergencyIconBtn}
+                    onPress={() => {
+                        setSelectedEventItem(event);
+                        setShowIncidentModal(true);
+                    }}
+                >
+                    <Feather name="alert-triangle" size={18} color={Colors.warning} />
+                </TouchableOpacity>
+                <View style={styles.dayBadge}>
+                    <Text style={styles.dayBadgeText}>{event.dayInfo}</Text>
+                </View>
+             </View>
+            </View>
+
+            {/* MULTI-SEGMENT PROGRESS BAR */}
+            <View style={styles.progressSection}>
+            <View style={styles.progressInfo}>
+                <Text style={styles.progressLabel}>Progreso Total</Text>
+                <Text style={styles.progressValueText}>{event.actualProgress} de {event.targetQuantity} {event.unit}</Text>
+            </View>
+            <View style={styles.progressBarBg}>
+                <View style={[styles.progressSegmentPast, { width: `${yesterdayPercent}%` }]} />
+                <View style={[styles.progressSegmentToday, { width: `${todayPercent}%`, left: `${yesterdayPercent}%` }]} />
+                <View style={[styles.expectedMarker, { left: `${plannedPercent}%` }]} />
+            </View>
+            </View>
         </TouchableOpacity>
-      </TouchableOpacity>
+
+        {/* BOTTOM: Instagram-Style Action Row */}
+        <View style={styles.actionRow}>
+            <View style={styles.actionIconsLeft}>
+                <TouchableOpacity 
+                    style={styles.actionIconBtn}
+                    onPress={() => router.push({ pathname: '/evidence', params: { title: event.title, targetQuantity: event.targetQuantity, unit: event.unit } })}
+                >
+                    <Feather name="camera" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                    style={styles.actionIconBtn}
+                    onPress={() => {
+                        setSelectedEventItem(event);
+                        setShowCommentsModal(true);
+                    }}
+                >
+                    <Feather name="message-circle" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.actionIconsRight}>
+             </View>
+        </View>
+
+        <Text style={styles.likesText}>10 Archivos • 3 Comentarios</Text>
+      </View>
     );
   };
 
@@ -275,36 +278,91 @@ export default function Home() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <View>
+            <View style={{flex: 1, marginRight: Spacing.md}}>
                 <TouchableOpacity onPress={() => setShowProjectModal(true)} style={styles.projectDropdownBtn}>
-                    <Feather name="map-pin" size={12} color={Colors.textSecondary} style={{marginRight: 6}} />
-                    <Text style={styles.projectDropdownText}>{activeProject.name}</Text>
-                    <Feather name="chevron-down" size={14} color={Colors.textPrimary} style={{marginLeft: 4}} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={toggleUser} style={styles.roleBadge}>
-                    <Text style={styles.roleBadgeText}>
-                        {currentUser.role === 'admin' ? 'Vista: ADMINISTRADOR' : `Área: ${currentUser.assignedArea}`}
-                    </Text>
-                    <Feather name="refresh-cw" size={10} color={Colors.primary} style={{marginLeft: 4}} />
+                    <View style={styles.projectIconBadge}>
+                        <Feather name="map" size={16} color={Colors.primary} />
+                    </View>
+                    <Text style={styles.projectDropdownText} numberOfLines={1}>{activeProject.name}</Text>
+                    <Feather name="chevron-down" size={18} color={Colors.textPrimary} style={{marginLeft: 'auto'}} />
                 </TouchableOpacity>
             </View>
-            <TouchableOpacity onPress={() => router.push('/profile')}>
-              <View style={styles.avatar}>
-                 <Feather name="user" size={20} color={currentUser.role === 'admin' ? Colors.primary : Colors.textSecondary} />
-              </View>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+            </View>
           </View>
-          <Text style={styles.titleText}>Hola, {currentUser.name.split(' ')[0]}</Text>
+          
+          <View style={styles.titleRow}>
+             <Text style={styles.titleText}>Hola, {currentUser.name.split(' ')[0]}</Text>
+             <TouchableOpacity onPress={toggleUser} style={styles.rolePill}>
+                 <Text style={styles.rolePillText}>
+                     {currentUser.role === 'admin' ? 'ADMIN' : currentUser.assignedArea.toUpperCase()}
+                 </Text>
+             </TouchableOpacity>
+          </View>
           
           <View style={styles.daysRow}>
-            {DAYS.map((d, i) => (
+            {DAYS.map((d, i) => {
+              let bgStyle = null;
+              let textStyle = null;
+              
+              if (d.status === 'completed') {
+                bgStyle = { backgroundColor: Colors.successLight };
+                textStyle = { color: Colors.success };
+              } else if (d.status === 'missing') {
+                bgStyle = { backgroundColor: Colors.errorLight };
+                textStyle = { color: Colors.error };
+              } else if (d.status === 'incomplete') {
+                bgStyle = { backgroundColor: Colors.warningLight };
+                textStyle = { color: Colors.warning };
+              }
+
+              return (
               <View key={i} style={styles.dayCol}>
-                <Text style={[styles.dayName, d.active && styles.dayNameActive]}>{d.day}</Text>
-                <Text style={[styles.dayNumber, d.active && styles.dayNumberActive]}>{d.date}</Text>
-                {d.active && <View style={styles.activeDot} />}
+                <Text style={[styles.dayName, d.active && styles.dayNameActive, textStyle]}>{d.day}</Text>
+                <View style={[styles.dayCircle, bgStyle, d.active && { backgroundColor: Colors.primary }]}>
+                    <Text style={[styles.dayNumber, d.active && styles.dayNumberActive, textStyle, d.active && {color: Colors.paper}]}>{d.date}</Text>
+                </View>
+                <View style={styles.statusIndicator}>
+                  {d.status === 'missing' && <View style={[styles.miniDot, { backgroundColor: Colors.error }]} />}
+                  {d.status === 'incomplete' && <View style={[styles.miniDot, { backgroundColor: Colors.warning }]} />}
+                  {d.active && <View style={styles.activeDot} />}
+                </View>
               </View>
-            ))}
+            )})}
           </View>
+
+        {/* Sleek Daily Progress */}
+        <View style={styles.sleekProgressContainer}>
+            <View style={styles.sleekProgressHeader}>
+                <Text style={styles.sleekProgressLabel}>Progreso Hoy</Text>
+                <Text style={styles.sleekProgressValue}>4.5 / 8 h</Text>
+            </View>
+            <View style={styles.sleekProgressBarBg}>
+                <View style={[styles.sleekProgressBarFill, { width: '55%' }]} />
+            </View>
+        </View>
+        </View>
+
+        {/* Action Alerts Section */}
+        <View style={styles.alertsContainer}>
+            {hasSyncPending ? (
+                <View style={[styles.alertCardWarning, { paddingRight: Spacing.sm }]}>
+                    <View style={styles.alertIconWarning}>
+                        <Feather name="cloud-off" size={20} color={Colors.warning} />
+                    </View>
+                    <View style={styles.alertTextContent}>
+                        <Text style={styles.alertTitleWarning}>Sincronización Pendiente</Text>
+                        <Text style={styles.alertDescWarning}>3 registros locales sin subir</Text>
+                    </View>
+                    <TouchableOpacity 
+                        style={styles.syncActionButton}
+                        onPress={() => setHasSyncPending(false)}
+                    >
+                        <Feather name="refresh-cw" size={14} color={Colors.paper} style={{ marginRight: 6 }} />
+                        <Text style={styles.syncActionText}>Sincronizar</Text>
+                    </TouchableOpacity>
+                </View>
+            ) : null}
         </View>
 
         {/* Timeline */}
@@ -320,10 +378,12 @@ export default function Home() {
                   <View style={[
                     styles.node, 
                     isActive && styles.nodeActive,
-                    isCompleted && styles.nodeCompleted
+                    isCompleted && styles.nodeCompleted,
+                    event.status === 'missing' && { borderColor: Colors.error }
                   ]}>
                     {isActive && <View style={styles.nodeInnerActive} />}
                     {isCompleted && <Feather name="check" size={10} color={Colors.primary} />}
+                    {event.status === 'missing' && <Feather name="alert-triangle" size={10} color={Colors.error} />}
                   </View>
                   {index !== filteredEvents.length - 1 && <View style={styles.lineBottom} />}
                 </View>
@@ -331,12 +391,22 @@ export default function Home() {
                 {/* Card or Registry Pill */}
                 {event.type === 'registry' ? (
                   <TouchableOpacity 
-                    style={styles.registryCard} 
-                    onPress={() => router.push({ pathname: '/registry_detail', params: { title: event.title, time: event.time } })}
+                    style={[styles.registryCard, event.status === 'missing' && styles.registryCardMissing]} 
+                    onPress={() => {
+                      router.push({ 
+                        pathname: '/registry_detail', 
+                        params: { title: event.title, time: event.time, projectName: activeProject.name } 
+                      });
+                    }}
                   >
-                     <Feather name={event.title.includes('Out') ? 'moon' : 'sunrise'} size={16} color={Colors.textSecondary} />
-                     <Text style={styles.registryTitle}>{event.title}</Text>
-                     <Text style={styles.registryTime}>{event.time}</Text>
+                     <Feather name={event.title.includes('Out') ? 'moon' : 'sunrise'} size={16} color={event.status === 'missing' ? Colors.error : Colors.textSecondary} />
+                     <View style={{marginLeft: Spacing.sm, flex: 1}}>
+                        <Text style={[styles.registryTitle, {marginLeft: 0}, event.status === 'missing' && {color: Colors.error}]}>
+                            {event.status === 'missing' ? '¡Falta Registro!' : event.title}
+                        </Text>
+                        {event.status === 'missing' && <Text style={{fontSize: 12, color: Colors.error, marginTop: 2}}>{event.subtitle}</Text>}
+                     </View>
+                     <Text style={[styles.registryTime, event.status === 'missing' && {color: Colors.error}]}>{event.status === 'missing' ? 'Pendiente' : event.time}</Text>
                   </TouchableOpacity>
                 ) : (
                   renderDetailedCard(event, isActive)
@@ -353,16 +423,17 @@ export default function Home() {
       <View style={styles.bottomNavContainer}>
         <View style={styles.bottomNavBackground} />
         <View style={styles.bottomNavContent}>
-          <TouchableOpacity style={styles.navIcon} onPress={() => {}}>
-             <Feather name="grid" size={24} color={Colors.textMuted} />
+          <TouchableOpacity style={styles.navIcon} onPress={() => router.push('/notifications')}>
+             <Feather name="bell" size={24} color={Colors.textMuted} />
+             {hasSyncPending && <View style={styles.bellDotNav} />}
           </TouchableOpacity>
           <TouchableOpacity style={styles.fabWrapper} onPress={() => router.push('/camera')}>
             <View style={styles.fab}>
               <Feather name="sun" size={32} color={Colors.paper} />
             </View>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navIcon} onPress={() => router.push('/calendar')}>
-             <Feather name="calendar" size={24} color={Colors.textMuted} />
+          <TouchableOpacity style={styles.navIcon} onPress={() => router.push('/profile')}>
+             <Feather name="user" size={24} color={Colors.textMuted} />
           </TouchableOpacity>
         </View>
       </View>
@@ -383,6 +454,13 @@ export default function Home() {
                 onPress={() => {
                   setActiveProject(proj);
                   setShowProjectModal(false);
+                  if (pendingRegistry) {
+                    router.push({ 
+                      pathname: '/registry_detail', 
+                      params: { title: pendingRegistry.title, time: pendingRegistry.time, projectName: proj.name } 
+                    });
+                    setPendingRegistry(null);
+                  }
                 }}
               >
                 <Feather name="map-pin" size={16} color={activeProject.id === proj.id ? Colors.primary : Colors.textSecondary} />
@@ -393,6 +471,219 @@ export default function Home() {
               </TouchableOpacity>
             ))}
           </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Slide-Up Modal: Activity Breakdown (The "Redundant" Info) */}
+      <Modal
+        visible={showDetailsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowDetailsModal(false)}
+      >
+        <TouchableOpacity style={styles.slideModalOverlay} activeOpacity={1} onPress={() => setShowDetailsModal(false)}>
+            <TouchableWithoutFeedback>
+                <View style={[styles.slideModalContent, { minHeight: 400 }]}>
+                    <View style={styles.dragHandle} />
+                    {selectedEventItem && (
+                        <ScrollView showsVerticalScrollIndicator={false}>
+                            <Text style={styles.slideModalTitle}>Desglose Matemático</Text>
+                            <Text style={styles.slideModalSubtitle}>{selectedEventItem.title}</Text>
+
+                            <View style={[styles.statsRow, { marginTop: Spacing.xl }]}>
+                                <View style={styles.statBox}>
+                                    <Text style={styles.statLabel}>Avance programado</Text>
+                                    <Text style={styles.statValueBlue}>{selectedEventItem.plannedProgress}</Text>
+                                    <Text style={styles.statSublabel}>{selectedEventItem.unit}</Text>
+                                </View>
+                                <View style={styles.statBox}>
+                                    <Text style={styles.statLabel}>Avance real acumulado</Text>
+                                    <View style={styles.valueWithVariance}>
+                                        <Text style={styles.statValueDark}>{selectedEventItem.actualProgress}</Text>
+                                        <Text style={[styles.varianceText, { color: (selectedEventItem.actualProgress - selectedEventItem.plannedProgress) >= 0 ? Colors.success : Colors.error }]}>
+                                            {(selectedEventItem.actualProgress - selectedEventItem.plannedProgress) >= 0 ? '+' : ''}{(selectedEventItem.actualProgress - selectedEventItem.plannedProgress)}
+                                        </Text>
+                                    </View>
+                                    <Text style={styles.statSublabel}>{selectedEventItem.unit}</Text>
+                                </View>
+                            </View>
+
+                            <View style={[styles.breakdownRow, { marginTop: Spacing.xl }]}>
+                                <Text style={styles.breakdownTitle}>Desglose del día:</Text>
+                                <View style={styles.breakdownNumbers}>
+                                    <Text style={styles.breakdownText}>Ayer tenía: <Text style={styles.textBold}>{selectedEventItem.yesterdayProgress} {selectedEventItem.unit}</Text></Text>
+                                    <Text style={styles.breakdownText}>Hoy avanzó: <Text style={styles.textBold}>+{selectedEventItem.todayProgress} {selectedEventItem.unit}</Text></Text>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    )}
+                </View>
+            </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Slide-Up Modal: Comments (Instagram Style) */}
+      <Modal
+        visible={showCommentsModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowCommentsModal(false)}
+      >
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            <TouchableOpacity style={styles.slideModalOverlay} activeOpacity={1} onPress={() => { Keyboard.dismiss(); setShowCommentsModal(false); }}>
+                <TouchableWithoutFeedback>
+                    <View style={styles.commentsModalContent}>
+                        <View style={styles.dragHandle} />
+                        <Text style={styles.slideModalTitleCenter}>Comentarios</Text>
+                        
+                        <ScrollView style={styles.commentsList} showsVerticalScrollIndicator={false}>
+                            {/* Mock Comments */}
+                            <View style={styles.commentRow}>
+                                <View style={styles.commentAvatar}><Text style={styles.commentAvatarText}>A</Text></View>
+                                <View style={styles.commentBody}>
+                                    <Text style={styles.commentAuthor}>admin_solenium</Text>
+                                    <Text style={styles.commentText}>¿Cómo va el montaje en el Sector Sur?</Text>
+                                    <Text style={styles.commentTime}>2h</Text>
+                                </View>
+                                <Feather name="heart" size={14} color={Colors.textMuted} style={styles.commentLike} />
+                            </View>
+                            
+                            <View style={styles.commentRow}>
+                                <View style={[styles.commentAvatar, {backgroundColor: '#14B8A6'}]}><Text style={styles.commentAvatarText}>C</Text></View>
+                                <View style={styles.commentBody}>
+                                    <Text style={styles.commentAuthor}>civil_super</Text>
+                                    <Text style={styles.commentText}>Hubo un retraso con la lluvia de la mañana, pero ya retomamos con las cuadrillas 1 y 2.</Text>
+                                    <Text style={styles.commentTime}>1h</Text>
+                                </View>
+                                <Feather name="heart" size={14} color={Colors.textMuted} style={styles.commentLike} />
+                            </View>
+                        </ScrollView>
+
+                        {/* Input Area */}
+                        <View style={styles.commentInputContainer}>
+                            <View style={[styles.commentAvatar, {width: 32, height: 32, backgroundColor: Colors.primaryLight}]}><Text style={[styles.commentAvatarText, {color: Colors.primary}]}>Y</Text></View>
+                            <TextInput 
+                                style={styles.commentInput} 
+                                placeholder="Agrega un comentario..." 
+                                placeholderTextColor={Colors.textMuted}
+                                multiline
+                             />
+                             <TouchableOpacity style={styles.commentSendBtn}>
+                                 <Text style={styles.commentSendText}>Publicar</Text>
+                             </TouchableOpacity>
+                        </View>
+                    </View>
+                </TouchableWithoutFeedback>
+            </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Slide-Up Modal: Incident Report (Social Style) */}
+      <Modal
+        visible={showIncidentModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowIncidentModal(false)}
+      >
+        <TouchableOpacity style={styles.slideModalOverlay} activeOpacity={1} onPress={() => setShowIncidentModal(false)}>
+            <TouchableWithoutFeedback>
+                <View style={[styles.slideModalContent, { minHeight: 550 }]}>
+                    <View style={styles.dragHandle} />
+                    
+                    <View style={styles.incidentHeader}>
+                        <Text style={styles.incidentTitle}>Nueva Novedad</Text>
+                        <TouchableOpacity onPress={() => setShowIncidentModal(false)}>
+                            <Text style={styles.incidentCancel}>Cancelar</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 40}}>
+                        
+                        {/* Hierarchy 1: Categories Grid */}
+                        <Text style={styles.incidentSectionTitle}>¿Qué sucedió?</Text>
+                        <View style={styles.incidentGrid}>
+                            {tempIncidents.map((type) => (
+                                <TouchableOpacity 
+                                    key={type.id} 
+                                    activeOpacity={0.7}
+                                    style={[
+                                        styles.incidentTypeBtn, 
+                                        selectedIncidentType === type.id && { backgroundColor: type.color + '15', borderColor: type.color }
+                                    ]}
+                                    onPress={() => setSelectedIncidentType(type.id)}
+                                >
+                                    <View style={[styles.incidentIconCircle, { backgroundColor: type.color + '20' }]}>
+                                        <Feather name={type.icon as any} size={20} color={type.color} />
+                                    </View>
+                                    <Text style={[styles.incidentTypeLabel, selectedIncidentType === type.id && { color: type.color, fontWeight: '800' }]}>
+                                        {type.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+
+                        {/* Hierarchy 2: Dynamic "Otros" Input */}
+                        {selectedIncidentType === 'otros' && (
+                            <View style={styles.customIncidentContainer}>
+                                <Text style={styles.incidentSectionTitle}>Nombre de la Novedad</Text>
+                                <View style={styles.tagSearchContainer}>
+                                    <Feather name="edit-3" size={16} color={Colors.textMuted} />
+                                    <TextInput 
+                                        style={styles.tagSearchInput}
+                                        placeholder="Ej: Retraso por tráfico, Falla Eléctrica..."
+                                        placeholderTextColor={Colors.textMuted}
+                                        value={customIncidentName}
+                                        onChangeText={setCustomIncidentName}
+                                    />
+                                </View>
+                                <TouchableOpacity 
+                                    style={styles.saveCategoryBtn}
+                                    onPress={() => {
+                                        if (customIncidentName.trim()) {
+                                            const newCat = { 
+                                                id: `custom_${Date.now()}`, 
+                                                label: customIncidentName, 
+                                                icon: 'info', 
+                                                color: Colors.primary 
+                                            };
+                                            setTempIncidents([...tempIncidents, newCat]);
+                                            setSelectedIncidentType(newCat.id);
+                                            setCustomIncidentName('');
+                                        }
+                                    }}
+                                >
+                                    <View style={styles.saveCategoryCircle}>
+                                        <Feather name="plus" size={14} color={Colors.paper} />
+                                    </View>
+                                    <Text style={styles.saveCategoryText}>Guardar como botón rápido</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                        {/* Hierarchy 3: Detailed Comment */}
+                        <Text style={styles.incidentSectionTitle}>Comentario Adicional</Text>
+                        <View style={styles.incidentInputBox}>
+                            <TextInput 
+                                style={styles.incidentTextInput}
+                                placeholder="Describe brevemente lo ocurrido..."
+                                placeholderTextColor={Colors.textMuted}
+                                multiline
+                            />
+                        </View>
+
+                        <TouchableOpacity 
+                            style={[styles.incidentSubmitBtn, !selectedIncidentType && { opacity: 0.5 }]}
+                            disabled={!selectedIncidentType}
+                            onPress={() => setShowIncidentModal(false)}
+                        >
+                            <Text style={styles.incidentSubmitText}>Reportar Novedad</Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
+            </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
 
@@ -416,22 +707,34 @@ const styles = StyleSheet.create({
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: Spacing.xs,
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
   },
-  roleBadge: {
+  headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
   },
-  roleBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.primary,
+  bellBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.paper,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.error,
+    borderWidth: 1,
+    borderColor: Colors.paper,
   },
   avatar: {
     width: 36,
@@ -444,19 +747,51 @@ const styles = StyleSheet.create({
   projectDropdownBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
+    backgroundColor: Colors.paper,
+    padding: Spacing.sm,
+    borderRadius: Radii.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.sm,
+  },
+  projectIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.sm,
   },
   projectDropdownText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    flex: 1,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    justifyContent: 'space-between',
   },
   titleText: {
     fontSize: 28,
     fontWeight: '800',
     color: Colors.textPrimary,
-    marginBottom: Spacing.md,
     letterSpacing: -0.5,
+  },
+  rolePill: {
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radii.full,
+  },
+  rolePillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary,
   },
   daysRow: {
     flexDirection: 'row',
@@ -490,6 +825,138 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: Colors.primary,
     marginTop: 4,
+  },
+  statusIndicator: {
+    height: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  miniDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  dayCircle: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 2,
+  },
+  alertsContainer: {
+      paddingHorizontal: Spacing.xl,
+      marginBottom: Spacing.sm,
+  },
+  alertCardCritical: {
+      flexDirection: 'row',
+      backgroundColor: Colors.errorLight,
+      borderRadius: Radii.md,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.md,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: 'rgba(239, 68, 68, 0.3)',
+  },
+  alertIconCritical: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: Spacing.sm,
+  },
+  alertTextContent: {
+      flex: 1,
+  },
+  alertTitleCritical: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: Colors.error,
+      marginBottom: 2,
+  },
+  alertDescCritical: {
+      fontSize: 12,
+      color: Colors.error,
+      lineHeight: 16,
+      opacity: 0.9,
+  },
+  alertCardWarning: {
+      flexDirection: 'row',
+      backgroundColor: Colors.warningLight,
+      borderRadius: Radii.md,
+      paddingVertical: Spacing.sm,
+      paddingHorizontal: Spacing.md,
+      marginBottom: Spacing.md,
+      alignItems: 'center',
+  },
+  alertIconWarning: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: 'rgba(245, 158, 11, 0.15)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: Spacing.sm,
+  },
+  alertTitleWarning: {
+      fontSize: 14,
+      fontWeight: '800',
+      color: '#B45309', // Darker warning color for text
+      marginBottom: 2,
+  },
+    alertDescWarning: {
+      fontSize: 12,
+      color: '#B45309',
+      lineHeight: 16,
+  },
+  syncActionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: Colors.warning,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: Radii.sm,
+      ...Shadows.sm,
+  },
+  syncActionText: {
+      fontSize: 12,
+      fontWeight: '800',
+      color: Colors.paper,
+  },
+  sleekProgressContainer: {
+      marginTop: Spacing.md,
+      paddingHorizontal: Spacing.sm,
+  },
+  sleekProgressHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: 6,
+  },
+  sleekProgressLabel: {
+      fontSize: 10,
+      textTransform: 'uppercase',
+      fontWeight: '800',
+      color: Colors.textSecondary,
+      letterSpacing: 0.5,
+  },
+  sleekProgressValue: {
+      fontSize: 11,
+      fontWeight: '800',
+      color: Colors.primary,
+  },
+  sleekProgressBarBg: {
+      height: 4,
+      backgroundColor: Colors.divider,
+      borderRadius: 2,
+  },
+  sleekProgressBarFill: {
+      height: 4,
+      backgroundColor: Colors.primary,
+      borderRadius: 2,
   },
   timelineContainer: {
     paddingHorizontal: Spacing.md,
@@ -548,6 +1015,14 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     paddingHorizontal: Spacing.sm,
     marginBottom: Spacing.md,
+  },
+  registryCardMissing: {
+    backgroundColor: Colors.errorLight,
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.3)',
+    alignItems: 'flex-start',
+    paddingVertical: Spacing.md,
   },
   registryTitle: {
     fontSize: 14,
@@ -889,6 +1364,26 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
   },
+  bellBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.paper,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.sm,
+  },
+  bellDotNav: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.error,
+  },
+  bellDot: {
+  },
   fab: {
     width: 64,
     height: 64,
@@ -897,5 +1392,391 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.lg,
+  },
+
+  // Project Switcher Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: Colors.paper,
+    borderRadius: Radii.lg,
+    padding: Spacing.lg,
+    width: '100%',
+    ...Shadows.lg,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  projectOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: Radii.md,
+    marginBottom: Spacing.xs,
+  },
+  projectOptionActive: {
+    backgroundColor: Colors.primaryLight,
+  },
+  projectOptionText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+    marginLeft: Spacing.sm,
+  },
+  projectOptionTextActive: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  
+  // Instagram Style Action Row Styles
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  actionIconsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionIconsRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionIconBtn: {
+    padding: 6,
+    marginRight: Spacing.sm,
+  },
+  likesText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+    paddingHorizontal: 4,
+  },
+
+  // Slide-Up Modals (Bottom Sheets) Styles
+  slideModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'flex-end',
+  },
+  slideModalContent: {
+    backgroundColor: Colors.paper,
+    borderTopLeftRadius: Radii.xl,
+    borderTopRightRadius: Radii.xl,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+    paddingTop: Spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  commentsModalContent: {
+    backgroundColor: Colors.paper,
+    borderTopLeftRadius: Radii.xl,
+    borderTopRightRadius: Radii.xl,
+    height: '75%', // Mimic IG comments drawer height
+    paddingTop: Spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  emergencyIconBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.warningLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  customIncidentContainer: {
+    marginBottom: Spacing.md,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: Colors.divider,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: Spacing.md,
+    marginTop: 8,
+  },
+  slideModalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  slideModalTitleCenter: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  slideModalSubtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.md,
+  },
+  
+  // Comments Drawer Specific Styles
+  commentsList: {
+    flex: 1,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.md,
+  },
+  commentRow: {
+    flexDirection: 'row',
+    marginBottom: Spacing.lg,
+  },
+  commentAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: Spacing.md,
+  },
+  commentAvatarText: {
+    color: Colors.paper,
+    fontWeight: '800',
+  },
+  commentBody: {
+    flex: 1,
+  },
+  commentAuthor: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  commentText: {
+    fontSize: 13,
+    color: Colors.textPrimary,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  commentTime: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  commentLike: {
+    padding: 4,
+    marginTop: 4,
+  },
+  commentInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.paper,
+  },
+  commentInput: {
+    flex: 1,
+    minHeight: 36,
+    maxHeight: 100,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingTop: 10,
+    paddingBottom: 10,
+    marginRight: Spacing.sm,
+    fontSize: 13,
+  },
+  commentSendBtn: {
+    alignSelf: 'flex-end',
+    marginBottom: 8,
+  },
+  commentSendText: {
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  
+  // Incident Modal Specific Styles
+  incidentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    paddingTop: 8,
+  },
+  incidentTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  incidentCancel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: Colors.error,
+  },
+  incidentSectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  incidentGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.sm,
+  },
+  incidentTypeBtn: {
+    width: (width - 64) / 2, // 2 columns with spacing
+    backgroundColor: Colors.paper,
+    borderRadius: Radii.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'transparent',
+    ...Shadows.sm,
+  },
+  incidentIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  incidentTypeLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  tagSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: Radii.md,
+    paddingHorizontal: Spacing.md,
+    height: 40,
+    marginBottom: Spacing.md,
+  },
+  tagSearchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    color: Colors.textPrimary,
+  },
+  tagList: {
+    paddingVertical: 4,
+    marginBottom: Spacing.md,
+  },
+  tagUserItem: {
+    alignItems: 'center',
+    marginRight: Spacing.lg,
+    width: 60,
+  },
+  tagAvatarCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.divider,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  tagAvatarText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textSecondary,
+  },
+  tagUserName: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  tagCheck: {
+    position: 'absolute',
+    bottom: 20,
+    right: 0,
+    backgroundColor: Colors.primary,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.paper,
+  },
+  incidentInputBox: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: Radii.md,
+    padding: Spacing.md,
+    minHeight: 80,
+    marginBottom: Spacing.xl,
+  },
+  incidentTextInput: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    lineHeight: 20,
+  },
+  incidentSubmitBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radii.md,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.md,
+  },
+  incidentSubmitText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.paper,
+  },
+  saveCategoryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingVertical: 8,
+    alignSelf: 'flex-start',
+  },
+  saveCategoryCircle: {
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: Colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 8,
+  },
+  saveCategoryText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: Colors.primary,
   }
 });
