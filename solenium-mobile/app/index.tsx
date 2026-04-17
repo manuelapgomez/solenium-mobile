@@ -138,32 +138,6 @@ const TIMELINE_EVENTS = [
   },
 ];
 
-const MOCK_EVIDENCE_HISTORY = [
-  {
-    day: 'Hoy',
-    items: [
-      { id: 'h1', type: 'image', uri: 'https://images.unsplash.com/photo-1541888946425-d81bb1930060?q=80&w=200', time: '8:30 AM', author: 'Juan Cimentaciones' },
-      { id: 'h2', type: 'image', uri: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=200', time: '9:15 AM', author: 'Juan Cimentaciones' },
-      { id: 'h3', type: 'audio', duration: '0:45', time: '9:20 AM', author: 'Juan Cimentaciones' },
-    ]
-  },
-  {
-    day: 'Ayer',
-    items: [
-      { id: 'a1', type: 'image', uri: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=200', time: '4:10 PM', author: 'Carlos Voltajes' },
-      { id: 'a2', type: 'text', content: 'Reporte técnico: Nivelación de terreno completada al 100% en sector norte.', time: '5:00 PM', author: 'Carlos Voltajes' },
-    ]
-  },
-  {
-    day: '15 de Abril',
-    items: [
-      { id: 'p1', type: 'image', uri: 'https://images.unsplash.com/photo-1590644365607-1c5a519a7a37?q=80&w=200', time: '10:00 AM', author: 'Ana Entregas' },
-      { id: 'p2', type: 'image', uri: 'https://images.unsplash.com/photo-1503387762-592dea58ef23?q=80&w=200', time: '11:30 AM', author: 'Ana Entregas' },
-      { id: 'p3', type: 'image', uri: 'https://images.unsplash.com/photo-1531834242409-77764f69f237?q=80&w=200', time: '2:15 PM', author: 'Ana Entregas' },
-    ]
-  }
-];
-
 export default function Home() {
   const router = useRouter();
   const { userId } = useLocalSearchParams();
@@ -321,16 +295,7 @@ export default function Home() {
              </View>
         </View>
 
-        <TouchableOpacity 
-            style={styles.actionCountRow}
-            onPress={() => {
-                setSelectedEventItem(event);
-                setShowDetailsModal(true);
-            }}
-        >
-            <Text style={styles.likesText}>{event.filesCount} Archivos • 3 Comentarios</Text>
-            <Feather name="chevron-right" size={14} color={Colors.textMuted} />
-        </TouchableOpacity>
+        <Text style={styles.likesText}>10 Archivos • 3 Comentarios</Text>
       </View>
     );
   };
@@ -570,48 +535,6 @@ export default function Home() {
                                     <Text style={styles.breakdownText}>Ayer tenía: <Text style={styles.textBold}>{selectedEventItem.yesterdayProgress} {selectedEventItem.unit}</Text></Text>
                                     <Text style={styles.breakdownText}>Hoy avanzó: <Text style={styles.textBold}>+{selectedEventItem.todayProgress} {selectedEventItem.unit}</Text></Text>
                                 </View>
-                            </View>
-
-                            {/* INTEGRATED EVIDENCE HISTORY */}
-                            <View style={styles.evidenceHistorySection}>
-                                <View style={styles.historyTitleRow}>
-                                    <View style={styles.historyLine} />
-                                    <Text style={styles.historySectionTitle}>Historial de Evidencias</Text>
-                                    <View style={styles.historyLine} />
-                                </View>
-
-                                {MOCK_EVIDENCE_HISTORY.map((group, gIdx) => (
-                                    <View key={gIdx} style={styles.historyDayGroup}>
-                                        <Text style={styles.historyDayLabel}>{group.day}</Text>
-                                        
-                                        <View style={styles.evidenceGrid}>
-                                            {group.items.filter(i => i.type === 'image').map((img) => (
-                                                <TouchableOpacity key={img.id} style={styles.evidenceThumbnail}>
-                                                    <View style={styles.thumbnailImgPlaceholder}>
-                                                        <Feather name="image" size={16} color={Colors.divider} />
-                                                    </View>
-                                                    <View style={styles.thumbnailMeta}>
-                                                        <Text style={styles.thumbnailTime}>{img.time}</Text>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            ))}
-                                        </View>
-
-                                        {group.items.filter(i => i.type !== 'image').map((item) => (
-                                            <TouchableOpacity key={item.id} style={styles.evidenceRowItem}>
-                                                <View style={[styles.evidenceIconBg, { backgroundColor: item.type === 'audio' ? '#E0F2FE' : '#F3F4F6' }]}>
-                                                    <Feather name={item.type === 'audio' ? 'mic' : 'file-text'} size={14} color={item.type === 'audio' ? '#0284C7' : Colors.textSecondary} />
-                                                </View>
-                                                <View style={styles.evidenceMainInfo}>
-                                                    <Text style={styles.evidenceTypeLabel}>{item.type === 'audio' ? `Nota de voz (${item.duration})` : 'Reporte técnico'}</Text>
-                                                    {item.content && <Text style={styles.evidenceExcerpt} numberOfLines={1}>{item.content}</Text>}
-                                                    <Text style={styles.evidenceMetaText}>{item.time} • Por {item.author}</Text>
-                                                </View>
-                                                <Feather name="chevron-right" size={16} color={Colors.divider} />
-                                            </TouchableOpacity>
-                                        ))}
-                                    </View>
-                                ))}
                             </View>
                         </ScrollView>
                     )}
