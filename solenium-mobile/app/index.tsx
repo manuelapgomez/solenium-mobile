@@ -138,6 +138,59 @@ const TIMELINE_EVENTS = [
   },
 ];
 
+// Mock evidence data grouped by day, keyed by task id
+const MOCK_EVIDENCE_HISTORY: any = {
+  2: [
+    {
+      day: 'Hoy',
+      date: 'Abril 17',
+      items: [
+        { id: 'e1', type: 'photo', time: '2:31 PM', author: 'Juan C.' },
+        { id: 'e2', type: 'photo', time: '1:15 PM', author: 'Juan C.' },
+        { id: 'e3', type: 'audio', time: '12:03 PM', author: 'Juan C.', duration: '0:48' },
+        { id: 'e4', type: 'photo', time: '9:22 AM', author: 'Juan C.' },
+      ],
+    },
+    {
+      day: 'Ayer',
+      date: 'Abril 16',
+      items: [
+        { id: 'e5', type: 'photo', time: '5:45 PM', author: 'Admin' },
+        { id: 'e6', type: 'photo', time: '3:10 PM', author: 'Juan C.' },
+        { id: 'e7', type: 'audio', time: '11:30 AM', author: 'Juan C.', duration: '1:22' },
+      ],
+    },
+    {
+      day: 'Abril 15',
+      date: 'Abril 15',
+      items: [
+        { id: 'e8', type: 'photo', time: '4:00 PM', author: 'Juan C.' },
+        { id: 'e9', type: 'photo', time: '2:20 PM', author: 'Juan C.' },
+        { id: 'e10', type: 'photo', time: '10:00 AM', author: 'Admin' },
+      ],
+    },
+  ],
+  3: [
+    {
+      day: 'Hoy',
+      date: 'Abril 17',
+      items: [
+        { id: 'e11', type: 'photo', time: '3:00 PM', author: 'Carlos V.' },
+        { id: 'e12', type: 'audio', time: '1:45 PM', author: 'Carlos V.', duration: '0:33' },
+        { id: 'e13', type: 'photo', time: '11:00 AM', author: 'Carlos V.' },
+      ],
+    },
+    {
+      day: 'Ayer',
+      date: 'Abril 16',
+      items: [
+        { id: 'e14', type: 'photo', time: '6:00 PM', author: 'Carlos V.' },
+        { id: 'e15', type: 'photo', time: '2:30 PM', author: 'Admin' },
+      ],
+    },
+  ],
+};
+
 export default function Home() {
   const router = useRouter();
   const { userId } = useLocalSearchParams();
@@ -172,6 +225,7 @@ export default function Home() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
   const [showIncidentModal, setShowIncidentModal] = useState(false);
+  const [showFilesHistoryModal, setShowFilesHistoryModal] = useState(false);
   const [selectedEventItem, setSelectedEventItem] = useState<any>(null);
   
   // Incident specific state
@@ -219,26 +273,15 @@ export default function Home() {
           }}
         >
             <View style={styles.detailedHeader}>
-            <View style={styles.detailedHeaderLeft}>
+              <View style={styles.detailedHeaderLeft}>
                 <View style={styles.areaBadge}>
-                <Text style={styles.areaBadgeText}>{event.area.toUpperCase()}</Text>
+                  <Text style={styles.areaBadgeText}>{event.area.toUpperCase()}</Text>
                 </View>
-                 <Text style={styles.detailedTitle}>{event.title}</Text>
-             </View>
-             <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                <TouchableOpacity 
-                    style={styles.emergencyIconBtn}
-                    onPress={() => {
-                        setSelectedEventItem(event);
-                        setShowIncidentModal(true);
-                    }}
-                >
-                    <Feather name="alert-triangle" size={18} color={Colors.warning} />
-                </TouchableOpacity>
-                <View style={styles.dayBadge}>
-                    <Text style={styles.dayBadgeText}>{event.dayInfo}</Text>
-                </View>
-             </View>
+                <Text style={styles.detailedTitle}>{event.title}</Text>
+              </View>
+              <View style={styles.dayBadge}>
+                <Text style={styles.dayBadgeText}>{event.dayInfo}</Text>
+              </View>
             </View>
 
             {/* MULTI-SEGMENT PROGRESS BAR */}
@@ -291,11 +334,42 @@ export default function Home() {
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.actionIconsRight}>
-             </View>
+            {/* Incident action — right side, styled as a clear actionable pill */}
+            <TouchableOpacity
+                style={styles.incidentPill}
+                activeOpacity={0.75}
+                onPress={() => {
+                    setSelectedEventItem(event);
+                    setShowIncidentModal(true);
+                }}
+            >
+                <Feather name="alert-triangle" size={14} color={Colors.warning} />
+                <Text style={styles.incidentPillText}>Novedad</Text>
+            </TouchableOpacity>
         </View>
 
-        <Text style={styles.likesText}>10 Archivos • 3 Comentarios</Text>
+        {/* Summary row — each part independently tappable */}
+        <View style={styles.summaryRow}>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedEventItem(event);
+                setShowFilesHistoryModal(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.likesText, styles.likesHighlight]}>{event.filesCount} Archivos</Text>
+            </TouchableOpacity>
+            <Text style={styles.likesSeparator}> • </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedEventItem(event);
+                setShowCommentsModal(true);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.likesText}>3 Comentarios</Text>
+            </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -410,24 +484,52 @@ export default function Home() {
 
                 {/* Card or Registry Pill */}
                 {event.type === 'registry' ? (
-                  <TouchableOpacity 
-                    style={[styles.registryCard, event.status === 'missing' && styles.registryCardMissing]} 
-                    onPress={() => {
-                      router.push({ 
-                        pathname: '/registry_detail', 
-                        params: { title: event.title, time: event.time, projectName: activeProject.name } 
-                      });
-                    }}
-                  >
-                     <Feather name={event.title.includes('Out') ? 'moon' : 'sunrise'} size={16} color={event.status === 'missing' ? Colors.error : Colors.textSecondary} />
-                     <View style={{marginLeft: Spacing.sm, flex: 1}}>
-                        <Text style={[styles.registryTitle, {marginLeft: 0}, event.status === 'missing' && {color: Colors.error}]}>
-                            {event.status === 'missing' ? '¡Falta Registro!' : event.title}
+                  event.status === 'missing' ? (
+                    // ══ COMPACT MISSING PILL ══
+                    <TouchableOpacity
+                      style={styles.missingRegistryCard}
+                      onPress={() => router.push('/camera')}
+                      activeOpacity={0.8}
+                    >
+                      {/* Icon */}
+                      <View style={styles.missingIconCircle}>
+                        <Feather
+                          name={event.title.includes('Out') ? 'moon' : 'sunrise'}
+                          size={14}
+                          color={Colors.error}
+                        />
+                      </View>
+
+                      {/* Text */}
+                      <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+                        <Text style={styles.missingTitle}>
+                          {event.title.includes('Out') ? '¡Falta Check-Out!' : '¡Falta Check-In!'}
                         </Text>
-                        {event.status === 'missing' && <Text style={{fontSize: 12, color: Colors.error, marginTop: 2}}>{event.subtitle}</Text>}
-                     </View>
-                     <Text style={[styles.registryTime, event.status === 'missing' && {color: Colors.error}]}>{event.status === 'missing' ? 'Pendiente' : event.time}</Text>
-                  </TouchableOpacity>
+                        <Text style={styles.missingSubtitle}>{event.subtitle}</Text>
+                      </View>
+
+                      {/* Micro CTA */}
+                      <View style={styles.missingCTAChip}>
+                        <Text style={styles.missingCTAChipText}>Registrar</Text>
+                        <Feather name="chevron-right" size={12} color={Colors.error} />
+                      </View>
+                    </TouchableOpacity>
+                  ) : (
+                    // ══ NORMAL REGISTRY PILL ══
+                    <TouchableOpacity
+                      style={styles.registryCard}
+                      onPress={() => router.push({
+                        pathname: '/registry_detail',
+                        params: { title: event.title, time: event.time, projectName: activeProject.name }
+                      })}
+                    >
+                      <Feather name={event.title.includes('Out') ? 'moon' : 'sunrise'} size={16} color={Colors.textSecondary} />
+                      <View style={{ marginLeft: Spacing.sm, flex: 1 }}>
+                        <Text style={styles.registryTitle}>{event.title}</Text>
+                      </View>
+                      <Text style={styles.registryTime}>{event.time}</Text>
+                    </TouchableOpacity>
+                  )
                 ) : (
                   renderDetailedCard(event, isActive)
                 )}
@@ -507,7 +609,7 @@ export default function Home() {
                 <View style={[styles.slideModalContent, { minHeight: 400 }]}>
                     <View style={styles.dragHandle} />
                     {selectedEventItem && (
-                        <ScrollView showsVerticalScrollIndicator={false}>
+                        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
                             <Text style={styles.slideModalTitle}>Desglose Matemático</Text>
                             <Text style={styles.slideModalSubtitle}>{selectedEventItem.title}</Text>
 
@@ -536,6 +638,66 @@ export default function Home() {
                                     <Text style={styles.breakdownText}>Hoy avanzó: <Text style={styles.textBold}>+{selectedEventItem.todayProgress} {selectedEventItem.unit}</Text></Text>
                                 </View>
                             </View>
+
+                            {/* ══ HISTORIAL DE EVIDENCIAS ══ */}
+                            <View style={styles.evidenceSectionDivider} />
+                            <View style={styles.evidenceSectionHeader}>
+                                <Feather name="folder" size={16} color={Colors.primary} />
+                                <Text style={styles.evidenceSectionTitle}>Historial de Evidencias</Text>
+                                <TouchableOpacity
+                                  onPress={() => {
+                                    setShowDetailsModal(false);
+                                    setShowFilesHistoryModal(true);
+                                  }}
+                                  style={styles.seeAllBtn}
+                                >
+                                  <Text style={styles.seeAllText}>Ver todo</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {(MOCK_EVIDENCE_HISTORY[selectedEventItem.id] || []).map((group: any) => (
+                              <View key={group.day} style={styles.evidenceDayGroup}>
+                                <View style={styles.evidenceDayHeader}>
+                                  <Text style={styles.evidenceDayLabel}>{group.day}</Text>
+                                  <Text style={styles.evidenceDayDate}>{group.date}</Text>
+                                </View>
+
+                                {/* Photo grid (3 columns) */}
+                                <View style={styles.evidencePhotoGrid}>
+                                  {group.items.filter((i: any) => i.type === 'photo').map((item: any) => (
+                                    <TouchableOpacity key={item.id} style={styles.evidencePhotoCell} activeOpacity={0.8}>
+                                      <View style={styles.evidencePhotoPlaceholder}>
+                                        <Feather name="image" size={20} color={Colors.textMuted} />
+                                      </View>
+                                      <Text style={styles.evidencePhotoTime}>{item.time}</Text>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+
+                                {/* Audio rows */}
+                                {group.items.filter((i: any) => i.type === 'audio').map((item: any) => (
+                                  <TouchableOpacity key={item.id} style={styles.evidenceAudioRow} activeOpacity={0.8}>
+                                    <View style={styles.evidenceAudioIcon}>
+                                      <Feather name="mic" size={16} color={Colors.primary} />
+                                    </View>
+                                    <View style={styles.evidenceAudioWave}>
+                                      {[4,8,12,6,10,14,5,9,7,11,4,8].map((h, idx) => (
+                                        <View key={idx} style={[styles.evidenceAudioBar, { height: h }]} />
+                                      ))}
+                                    </View>
+                                    <Text style={styles.evidenceAudioDuration}>{item.duration}</Text>
+                                    <Text style={styles.evidenceAudioAuthor}>{item.author} · {item.time}</Text>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            ))}
+
+                            {!(MOCK_EVIDENCE_HISTORY[selectedEventItem.id]) && (
+                              <View style={styles.evidenceEmptyState}>
+                                <Feather name="inbox" size={32} color={Colors.textMuted} />
+                                <Text style={styles.evidenceEmptyText}>Aún no hay evidencias subidas.</Text>
+                              </View>
+                            )}
                         </ScrollView>
                     )}
                 </View>
@@ -721,6 +883,87 @@ export default function Home() {
                     </ScrollView>
                 </View>
             </TouchableWithoutFeedback>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ══ FILES HISTORY BOTTOM SHEET ══ */}
+      <Modal
+        visible={showFilesHistoryModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowFilesHistoryModal(false)}
+      >
+        <TouchableOpacity style={styles.slideModalOverlay} activeOpacity={1} onPress={() => setShowFilesHistoryModal(false)}>
+          <TouchableWithoutFeedback>
+            <View style={[styles.slideModalContent, { minHeight: '80%' as any }]}>
+              <View style={styles.dragHandle} />
+              <View style={styles.filesHistoryHeader}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowFilesHistoryModal(false);
+                    setShowDetailsModal(true);
+                  }}
+                  style={styles.modalBackBtn}
+                >
+                  <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+                </TouchableOpacity>
+                <View style={{ flex: 1, marginLeft: Spacing.sm }}>
+                  <Text style={styles.slideModalTitle}>{selectedEventItem?.title}</Text>
+                  <Text style={styles.slideModalSubtitle}>Evidencias por Día</Text>
+                </View>
+                <TouchableOpacity onPress={() => setShowFilesHistoryModal(false)} style={styles.modalCloseBtn}>
+                  <Feather name="x" size={20} color={Colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                {(MOCK_EVIDENCE_HISTORY[selectedEventItem?.id] || []).map((group: any) => (
+                  <View key={group.day} style={styles.evidenceDayGroup}>
+                    <View style={styles.evidenceDayHeader}>
+                      <Text style={styles.evidenceDayLabel}>{group.day}</Text>
+                      <Text style={styles.evidenceDayDate}>{group.date} · {group.items.length} archivos</Text>
+                    </View>
+
+                    {/* Photo grid */}
+                    <View style={styles.evidencePhotoGrid}>
+                      {group.items.filter((i: any) => i.type === 'photo').map((item: any) => (
+                        <TouchableOpacity key={item.id} style={styles.evidencePhotoCell} activeOpacity={0.8}>
+                          <View style={styles.evidencePhotoPlaceholder}>
+                            <Feather name="image" size={22} color={Colors.textMuted} />
+                          </View>
+                          <Text style={styles.evidencePhotoTime}>{item.time}</Text>
+                          <Text style={styles.evidencePhotoAuthor}>{item.author}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+
+                    {/* Audio rows */}
+                    {group.items.filter((i: any) => i.type === 'audio').map((item: any) => (
+                      <TouchableOpacity key={item.id} style={styles.evidenceAudioRow} activeOpacity={0.8}>
+                        <View style={styles.evidenceAudioIcon}>
+                          <Feather name="mic" size={16} color={Colors.primary} />
+                        </View>
+                        <View style={styles.evidenceAudioWave}>
+                          {[4,8,12,6,10,14,5,9,7,11,4,8,6,10].map((h, idx) => (
+                            <View key={idx} style={[styles.evidenceAudioBar, { height: h }]} />
+                          ))}
+                        </View>
+                        <Text style={styles.evidenceAudioDuration}>{item.duration}</Text>
+                        <Text style={styles.evidenceAudioAuthor}>{item.author} · {item.time}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ))}
+
+                {!(MOCK_EVIDENCE_HISTORY[selectedEventItem?.id]) && (
+                  <View style={[styles.evidenceEmptyState, { marginTop: 40 }]}>
+                    <Feather name="inbox" size={40} color={Colors.textMuted} />
+                    <Text style={styles.evidenceEmptyText}>Aún no hay evidencias para esta tarea.</Text>
+                  </View>
+                )}
+              </ScrollView>
+            </View>
+          </TouchableWithoutFeedback>
         </TouchableOpacity>
       </Modal>
 
@@ -1038,6 +1281,60 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(239, 68, 68, 0.3)',
     alignItems: 'flex-start',
     paddingVertical: Spacing.md,
+  },
+  // ══ COMPACT MISSING PILL ══
+  missingRegistryCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.paper,
+    borderRadius: Radii.md,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.error,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.2)',
+    gap: 0,
+  },
+  missingIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(239,68,68,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  missingTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.error,
+    lineHeight: 17,
+  },
+  missingSubtitle: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+    lineHeight: 14,
+  },
+  missingCTAChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: Radii.full,
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.3)',
+    gap: 2,
+    flexShrink: 0,
+  },
+  missingCTAChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.error,
   },
   registryTitle: {
     fontSize: 14,
@@ -1473,8 +1770,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
     paddingHorizontal: 4,
+  },
+  likesHighlight: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
+  likesSeparator: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    paddingBottom: Spacing.xs,
+    marginTop: 2,
+  },
+  // Incident Pill — clear actionable button in the action row
+  incidentPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: Radii.full,
+    gap: 5,
+  },
+  incidentPillText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.warning,
   },
 
   // Slide-Up Modals (Bottom Sheets) Styles
@@ -1792,5 +2121,158 @@ const styles = StyleSheet.create({
       fontSize: 12,
       fontWeight: '700',
       color: Colors.primary,
-  }
+  },
+
+  // ——— EVIDENCE HISTORY ———
+  evidenceSectionDivider: {
+    height: 1,
+    backgroundColor: Colors.divider,
+    marginVertical: Spacing.xl,
+  },
+  evidenceSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    gap: 8,
+  },
+  evidenceSectionTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginLeft: 4,
+  },
+  seeAllBtn: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radii.full,
+  },
+  seeAllText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  evidenceDayGroup: {
+    marginBottom: Spacing.xl,
+  },
+  evidenceDayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+    paddingBottom: Spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
+  },
+  evidenceDayLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  evidenceDayDate: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  evidencePhotoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: Spacing.sm,
+  },
+  evidencePhotoCell: {
+    width: '30%',
+    alignItems: 'center',
+  },
+  evidencePhotoPlaceholder: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: Colors.background,
+    borderRadius: Radii.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.divider,
+    marginBottom: 4,
+  },
+  evidencePhotoTime: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  evidencePhotoAuthor: {
+    fontSize: 9,
+    color: Colors.textMuted,
+  },
+  evidenceAudioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderRadius: Radii.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
+  evidenceAudioIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  evidenceAudioWave: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  evidenceAudioBar: {
+    width: 3,
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
+    opacity: 0.7,
+  },
+  evidenceAudioDuration: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
+  evidenceAudioAuthor: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+  evidenceEmptyState: {
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: Spacing.xl,
+  },
+  evidenceEmptyText: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    fontWeight: '600',
+  },
+
+  // ——— FILES HISTORY MODAL ———
+  filesHistoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.lg,
+    paddingTop: Spacing.sm,
+  },
+  modalCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.divider,
+  },
 });
