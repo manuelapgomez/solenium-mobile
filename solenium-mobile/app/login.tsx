@@ -1,6 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter } from 'expo-router';
@@ -9,60 +8,66 @@ const { width } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.content}>
-        <View style={styles.heroSection}>
-            <View style={styles.logoBadge}>
-                <Feather name="shield" size={40} color={Colors.primary} />
-            </View>
-            <Text style={styles.welcomeTitle}>Solenium</Text>
-            <Text style={styles.welcomeSubtitle}>Seguridad y Transparencia en Campo</Text>
-        </View>
-
-        <View style={styles.infoSection}>
-            <View style={styles.infoCard}>
-                <View style={styles.infoIconBg}>
-                    <Feather name="cpu" size={20} color={Colors.primary} />
+        <ScrollView 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: Spacing.xl }}
+        >
+            <View style={styles.heroSection}>
+                <View style={styles.logoBadge}>
+                    <Feather name="shield" size={40} color={Colors.primary} />
                 </View>
-                <View style={styles.infoTextContainer}>
-                    <Text style={styles.infoCardTitle}>Identidad Biométrica</Text>
-                    <Text style={styles.infoCardDesc}>
-                        Usamos tecnología de reconocimiento facial para asegurar que cada reporte sea auténtico y proteja tu responsabilidad.
-                    </Text>
-                </View>
+                <Text style={styles.welcomeTitle}>Solenium</Text>
+                <Text style={styles.welcomeSubtitle}>Seguridad y Transparencia en Campo</Text>
             </View>
 
-            <View style={styles.infoCard}>
-                <View style={styles.infoIconBg}>
-                    <Feather name="wifi-off" size={20} color={Colors.success} />
+            <View style={styles.infoSection}>
+                <View style={styles.infoCard}>
+                    <View style={styles.infoIconBg}>
+                        <Feather name="cpu" size={20} color={Colors.primary} />
+                    </View>
+                    <View style={styles.infoTextContainer}>
+                        <Text style={styles.infoCardTitle}>Identidad Biométrica</Text>
+                        <Text style={styles.infoCardDesc}>
+                            Usamos tecnología de reconocimiento facial para asegurar que cada reporte sea auténtico y proteja tu responsabilidad.
+                        </Text>
+                    </View>
                 </View>
-                <View style={styles.infoTextContainer}>
-                    <Text style={styles.infoCardTitle}>Funciona Sin Internet</Text>
-                    <Text style={styles.infoCardDesc}>
-                        Tu biometría se procesa localmente en el dispositivo. Puedes iniciar sesión y registrar avances en cualquier lugar.
-                    </Text>
-                </View>
-            </View>
 
-            <View style={styles.infoCard}>
-                <View style={styles.infoIconBg}>
-                    <Feather name="lock" size={20} color={Colors.warning} />
+                <View style={styles.infoCard}>
+                    <View style={styles.infoIconBg}>
+                        <Feather name="wifi-off" size={20} color={Colors.success} />
+                    </View>
+                    <View style={styles.infoTextContainer}>
+                        <Text style={styles.infoCardTitle}>Funciona Sin Internet</Text>
+                        <Text style={styles.infoCardDesc}>
+                            Tu biometría se procesa localmente en el dispositivo. Puedes iniciar sesión y registrar avances en cualquier lugar.
+                        </Text>
+                    </View>
                 </View>
-                <View style={styles.infoTextContainer}>
-                    <Text style={styles.infoCardTitle}>Datos Protegidos</Text>
-                    <Text style={styles.infoCardDesc}>
-                        Tus fotos solo se usan para validar tu jornada laboral y nunca se comparten con terceros.
-                    </Text>
+
+                <View style={styles.infoCard}>
+                    <View style={styles.infoIconBg}>
+                        <Feather name="lock" size={20} color={Colors.warning} />
+                    </View>
+                    <View style={styles.infoTextContainer}>
+                        <Text style={styles.infoCardTitle}>Datos Protegidos</Text>
+                        <Text style={styles.infoCardDesc}>
+                            Tus fotos solo se usan para validar tu jornada laboral y nunca se comparten con terceros.
+                        </Text>
+                    </View>
                 </View>
             </View>
-        </View>
+        </ScrollView>
 
         <View style={styles.footer}>
             <TouchableOpacity 
                 style={styles.primaryBtn}
-                onPress={() => router.push('/onboarding')}
+                onPress={() => router.push('/onboarding' as any)}
             >
                 <Text style={styles.primaryBtnText}>Comenzar Registro</Text>
                 <Feather name="arrow-right" size={20} color={Colors.paper} />
@@ -70,7 +75,7 @@ export default function LoginScreen() {
             
             <TouchableOpacity 
                 style={styles.secondaryBtn}
-                onPress={() => router.push('/switch_account')}
+                onPress={() => router.push('/switch_account' as any)}
             >
                 <Text style={styles.secondaryBtnText}>Ya tengo una cuenta en este equipo</Text>
             </TouchableOpacity>

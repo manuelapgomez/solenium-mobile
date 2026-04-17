@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Dimensions, ScrollView } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SessionManager } from '../constants/session';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +20,7 @@ const STEPS = [
 export default function OnboardingScreen() {
   const router = useRouter();
   const { userId, mode } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
   const isVerifyMode = mode === 'verify';
   
   const [showInstructions, setShowInstructions] = useState(true);
@@ -38,10 +40,16 @@ export default function OnboardingScreen() {
         setCurrentStep(currentStep + 1);
       } else {
         // Finished!
-        if (userId) {
-            router.replace({ pathname: '/', params: { userId } });
+        if (isVerifyMode) {
+            // If it was a quick verification, go to dashboard with the same user
+            const finalId = userId as string || '1';
+            SessionManager.setUserId(finalId);
+            router.replace({ pathname: '/', params: { userId: finalId } });
         } else {
-            router.replace('/switch_account');
+            // If it was a full 6-photo registration (at the start or new user)
+            SessionManager.setUserId('1');
+            SessionManager.setRegistered();
+            router.replace({ pathname: '/', params: { userId: '1' } }); 
         }
       }
     }, 800);
@@ -59,40 +67,45 @@ export default function OnboardingScreen() {
                     <View style={{width: 24}} />
                 </View>
 
-                <View style={styles.instructionContainer}>
-                    <View style={styles.introIconCircle}>
-                        <Feather name={isVerifyMode ? "shield" : "user-check"} size={40} color={Colors.primary} />
-                    </View>
-                    <Text style={styles.introTitle}>
-                        {isVerifyMode ? 'Validación de Identidad' : 'Primer Registro Biométrico'}
-                    </Text>
-                    <Text style={styles.introDesc}>
-                        {isVerifyMode 
-                          ? 'Para asegurar que eres tú quien está operando, necesitamos una foto rápida de frente.' 
-                          : 'Para tu seguridad, crearemos un mapa digital de tu rostro. Necesitaremos 6 fotos en diferentes ángulos.'}
-                    </Text>
-
-                    <View style={styles.stepsPreview}>
-                        {activeSteps.map((step, index) => (
-                            <View key={step.id} style={styles.stepPreviewItem}>
-                                <View style={styles.stepMiniCircle}>
-                                    <Text style={styles.stepMiniNum}>{index + 1}</Text>
-                                </View>
-                                <Text style={styles.stepPreviewLabel}>{step.label}</Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    <View style={styles.whyBox}>
-                        <Feather name="info" size={16} color={Colors.textSecondary} />
-                        <Text style={styles.whyText}>
-                            Esto previene suplantaciones y asegura que tus reportes de obra tengan validez legal y técnica.
+                <ScrollView 
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: Spacing.xl }}
+                >
+                    <View style={styles.instructionContainer}>
+                        <View style={styles.introIconCircle}>
+                            <Feather name={isVerifyMode ? "shield" : "user-check"} size={40} color={Colors.primary} />
+                        </View>
+                        <Text style={styles.introTitle}>
+                            {isVerifyMode ? 'Validación de Identidad' : 'Primer Registro Biométrico'}
                         </Text>
+                        <Text style={styles.introDesc}>
+                            {isVerifyMode 
+                              ? 'Para asegurar que eres tú quien está operando, necesitamos una foto rápida de frente.' 
+                              : 'Para tu seguridad, crearemos un mapa digital de tu rostro. Necesitaremos 6 fotos en diferentes ángulos.'}
+                        </Text>
+
+                        <View style={styles.stepsPreview}>
+                            {activeSteps.map((step, index) => (
+                                <View key={step.id} style={styles.stepPreviewItem}>
+                                    <View style={styles.stepMiniCircle}>
+                                        <Text style={styles.stepMiniNum}>{index + 1}</Text>
+                                    </View>
+                                    <Text style={styles.stepPreviewLabel}>{step.label}</Text>
+                                </View>
+                            ))}
+                        </View>
+
+                        <View style={styles.whyBox}>
+                            <Feather name="info" size={16} color={Colors.textSecondary} />
+                            <Text style={styles.whyText}>
+                                Esto previene suplantaciones y asegura que tus reportes de obra tengan validez legal y técnica.
+                            </Text>
+                        </View>
                     </View>
-                </View>
+                </ScrollView>
 
                 <TouchableOpacity 
-                    style={styles.startBtn}
+                    style={[styles.startBtn, { marginBottom: Math.max(insets.bottom, Spacing.lg) }]}
                     onPress={() => setShowInstructions(false)}
                 >
                     <Text style={styles.startBtnText}>Entendido, continuar</Text>
@@ -141,7 +154,7 @@ export default function OnboardingScreen() {
              </View>
          </View>
 
-        <View style={styles.footer}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 40, Spacing.xxl) }]}>
             <TouchableOpacity 
                 style={[styles.captureBtn, isCapturing && styles.captureBtnDisabled]} 
                 onPress={handleCapture}

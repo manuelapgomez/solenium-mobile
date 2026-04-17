@@ -61,7 +61,7 @@ export default function AudioEvidenceScreen() {
 
     const handleFinish = () => {
         // Full process finished, go back to absolute home
-        router.push('/');
+        router.replace('/' as any);
     };
 
     return (

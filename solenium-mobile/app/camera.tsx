@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Animated } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter } from 'expo-router';
+import { SessionManager } from '../constants/session';
 // Hardware camera
 import { CameraView, useCameraPermissions } from 'expo-camera';
 
@@ -11,6 +12,8 @@ const { width, height } = Dimensions.get('window');
 
 export default function CameraScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const currentUserId = SessionManager.getUserId() || '1';
   const [permission, requestPermission] = useCameraPermissions();
   const [scanStatus, setScanStatus] = useState('scanning'); // scanning, success
   const scanAnim = new Animated.Value(0);
@@ -94,7 +97,7 @@ export default function CameraScreen() {
           </View>
 
           {/* Footer - Only confirmation button on success */}
-          <SafeAreaView style={styles.safeFooter}>
+          <View style={[styles.safeFooter, { paddingBottom: Math.max(insets.bottom + 40, Spacing.xxl) }]}>
             {isSuccess ? (
               <View style={styles.dualConfirmContainer}>
                 
@@ -106,12 +109,12 @@ export default function CameraScreen() {
 
                 <Text style={styles.selectTypeHint}>Selecciona tu tipo de registro:</Text>
                 <View style={styles.dualConfirmRow}>
-                   <TouchableOpacity style={styles.confirmBtnIngreso} onPress={() => router.replace('/')}>
+                   <TouchableOpacity style={styles.confirmBtnIngreso} onPress={() => router.replace({ pathname: '/', params: { userId: currentUserId } })}>
                      <Feather name="sunrise" size={20} color={Colors.paper} />
                      <Text style={styles.confirmBtnTextSmall}>Ingreso</Text>
                    </TouchableOpacity>
                    
-                   <TouchableOpacity style={styles.confirmBtnSalida} onPress={() => router.replace('/')}>
+                   <TouchableOpacity style={styles.confirmBtnSalida} onPress={() => router.replace({ pathname: '/', params: { userId: currentUserId } })}>
                      <Text style={styles.confirmBtnTextSmall}>Salida</Text>
                      <Feather name="moon" size={20} color={Colors.paper} />
                    </TouchableOpacity>
@@ -123,8 +126,7 @@ export default function CameraScreen() {
                  <Text style={styles.statusText}>Escaneando biometría...</Text>
               </View>
             )}
-          </SafeAreaView>
-
+          </View>
         </View>
       </CameraView>
     </View>

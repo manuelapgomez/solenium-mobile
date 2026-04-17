@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal, TextInput, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Shadows, Spacing, Radii } from '../constants/theme';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Redirect } from 'expo-router';
+import { SessionManager } from '../constants/session';
 
 const { width } = Dimensions.get('window');
 
@@ -137,17 +138,55 @@ const TIMELINE_EVENTS = [
   },
 ];
 
+const MOCK_EVIDENCE_HISTORY = [
+  {
+    day: 'Hoy',
+    items: [
+      { id: 'h1', type: 'image', uri: 'https://images.unsplash.com/photo-1541888946425-d81bb1930060?q=80&w=200', time: '8:30 AM', author: 'Juan Cimentaciones' },
+      { id: 'h2', type: 'image', uri: 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=200', time: '9:15 AM', author: 'Juan Cimentaciones' },
+      { id: 'h3', type: 'audio', duration: '0:45', time: '9:20 AM', author: 'Juan Cimentaciones' },
+    ]
+  },
+  {
+    day: 'Ayer',
+    items: [
+      { id: 'a1', type: 'image', uri: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?q=80&w=200', time: '4:10 PM', author: 'Carlos Voltajes' },
+      { id: 'a2', type: 'text', content: 'Reporte técnico: Nivelación de terreno completada al 100% en sector norte.', time: '5:00 PM', author: 'Carlos Voltajes' },
+    ]
+  },
+  {
+    day: '15 de Abril',
+    items: [
+      { id: 'p1', type: 'image', uri: 'https://images.unsplash.com/photo-1590644365607-1c5a519a7a37?q=80&w=200', time: '10:00 AM', author: 'Ana Entregas' },
+      { id: 'p2', type: 'image', uri: 'https://images.unsplash.com/photo-1503387762-592dea58ef23?q=80&w=200', time: '11:30 AM', author: 'Ana Entregas' },
+      { id: 'p3', type: 'image', uri: 'https://images.unsplash.com/photo-1531834242409-77764f69f237?q=80&w=200', time: '2:15 PM', author: 'Ana Entregas' },
+    ]
+  }
+];
+
 export default function Home() {
   const router = useRouter();
   const { userId } = useLocalSearchParams();
+  const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    // If no user is authenticated, redirect to the friendly login screen
-    if (!userId) {
-      router.replace('/login');
-    }
-  }, [userId]);
-  const [currentUser, setCurrentUser] = useState(MOCK_USERS.admin);
+  // 1. Sync Manager if we have params
+  if (userId && !SessionManager.getUserId()) {
+    SessionManager.setUserId(userId as string);
+  }
+
+  // 2. Determine Authentication State
+  const authenticatedId = userId || SessionManager.getUserId();
+  const isInitialized = SessionManager.isInitialized();
+
+  // 3. ONLY redirect to login if we have NO user and the app is NOT in an active session
+  if (!authenticatedId && !isInitialized) {
+    return <Redirect href={"/login" as any} />;
+  }
+
+  // 4. Default user '1' as fallback for prototype stability if we lost everything but are past the door
+  const activeUserId = authenticatedId || '1';
+
+  const [currentUser, setCurrentUser] = useState(MOCK_USERS[activeUserId as string] || MOCK_USERS.admin);
   const [activeProject, setActiveProject] = useState(MOCK_PROJECTS[0]);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [pendingRegistry, setPendingRegistry] = useState<any>(null);
@@ -230,15 +269,31 @@ export default function Home() {
 
             {/* MULTI-SEGMENT PROGRESS BAR */}
             <View style={styles.progressSection}>
-            <View style={styles.progressInfo}>
-                <Text style={styles.progressLabel}>Progreso Total</Text>
-                <Text style={styles.progressValueText}>{event.actualProgress} de {event.targetQuantity} {event.unit}</Text>
-            </View>
-            <View style={styles.progressBarBg}>
-                <View style={[styles.progressSegmentPast, { width: `${yesterdayPercent}%` }]} />
-                <View style={[styles.progressSegmentToday, { width: `${todayPercent}%`, left: `${yesterdayPercent}%` }]} />
-                <View style={[styles.expectedMarker, { left: `${plannedPercent}%` }]} />
-            </View>
+              <View style={styles.progressInfo}>
+                  <Text style={styles.progressLabel}>Progreso</Text>
+                  <Text style={styles.progressValueText}>{Math.round(actualPercent)}% de 100%</Text>
+              </View>
+              <View style={styles.progressBarBg}>
+                  <View style={[styles.progressSegmentPast, { width: `${yesterdayPercent}%` }]} />
+                  <View style={[styles.progressSegmentToday, { width: `${todayPercent}%`, left: `${yesterdayPercent}%` }]} />
+                  <View style={[styles.expectedMarker, { left: `${plannedPercent}%` }]} />
+              </View>
+              
+              {/* LEGENDS */}
+              <View style={styles.progressLegend}>
+                  <View style={styles.legendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: '#FF8A8A' }]} />
+                      <Text style={styles.legendText}>Días anteriores</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                      <View style={[styles.legendDot, { backgroundColor: '#8E9AAF' }]} />
+                      <Text style={styles.legendText}>Hoy</Text>
+                  </View>
+                  <View style={styles.legendItem}>
+                      <View style={styles.legendLine} />
+                      <Text style={styles.legendText}>Esperado ({Math.round(plannedPercent)}%)</Text>
+                  </View>
+              </View>
             </View>
         </TouchableOpacity>
 
@@ -266,7 +321,16 @@ export default function Home() {
              </View>
         </View>
 
-        <Text style={styles.likesText}>10 Archivos • 3 Comentarios</Text>
+        <TouchableOpacity 
+            style={styles.actionCountRow}
+            onPress={() => {
+                setSelectedEventItem(event);
+                setShowDetailsModal(true);
+            }}
+        >
+            <Text style={styles.likesText}>{event.filesCount} Archivos • 3 Comentarios</Text>
+            <Feather name="chevron-right" size={14} color={Colors.textMuted} />
+        </TouchableOpacity>
       </View>
     );
   };
@@ -331,16 +395,7 @@ export default function Home() {
             )})}
           </View>
 
-        {/* Sleek Daily Progress */}
-        <View style={styles.sleekProgressContainer}>
-            <View style={styles.sleekProgressHeader}>
-                <Text style={styles.sleekProgressLabel}>Progreso Hoy</Text>
-                <Text style={styles.sleekProgressValue}>4.5 / 8 h</Text>
-            </View>
-            <View style={styles.sleekProgressBarBg}>
-                <View style={[styles.sleekProgressBarFill, { width: '55%' }]} />
-            </View>
-        </View>
+
         </View>
 
         {/* Action Alerts Section */}
@@ -420,23 +475,24 @@ export default function Home() {
       </ScrollView>
 
       {/* Floating Action Navigation */}
-      <View style={styles.bottomNavContainer}>
-        <View style={styles.bottomNavBackground} />
-        <View style={styles.bottomNavContent}>
-          <TouchableOpacity style={styles.navIcon} onPress={() => router.push('/notifications')}>
-             <Feather name="bell" size={24} color={Colors.textMuted} />
-             {hasSyncPending && <View style={styles.bellDotNav} />}
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.fabWrapper} onPress={() => router.push('/camera')}>
-            <View style={styles.fab}>
-              <Feather name="sun" size={32} color={Colors.paper} />
-            </View>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navIcon} onPress={() => router.push('/profile')}>
-             <Feather name="user" size={24} color={Colors.textMuted} />
-          </TouchableOpacity>
-        </View>
+      <View style={[styles.bottomNavContainer, { bottom: Math.max(insets.bottom, 20) }]}>
+      <View style={styles.floatingNavBackground} />
+      <View style={styles.bottomNavContent}>
+        <TouchableOpacity style={styles.navIcon} onPress={() => router.push('/notifications' as any)}>
+          <Feather name="bell" size={24} color={Colors.textSecondary} />
+          {hasSyncPending && <View style={styles.bellDotNav} />}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.fabWrapper} onPress={() => router.push('/camera')}>
+          <View style={styles.fab}>
+            <Feather name="sun" size={32} color={Colors.paper} />
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navIcon} onPress={() => router.push('/profile')}>
+          <Feather name="user" size={24} color={Colors.textSecondary} />
+        </TouchableOpacity>
       </View>
+    </View>
 
       {/* Project Switcher Modal */}
       <Modal
@@ -514,6 +570,48 @@ export default function Home() {
                                     <Text style={styles.breakdownText}>Ayer tenía: <Text style={styles.textBold}>{selectedEventItem.yesterdayProgress} {selectedEventItem.unit}</Text></Text>
                                     <Text style={styles.breakdownText}>Hoy avanzó: <Text style={styles.textBold}>+{selectedEventItem.todayProgress} {selectedEventItem.unit}</Text></Text>
                                 </View>
+                            </View>
+
+                            {/* INTEGRATED EVIDENCE HISTORY */}
+                            <View style={styles.evidenceHistorySection}>
+                                <View style={styles.historyTitleRow}>
+                                    <View style={styles.historyLine} />
+                                    <Text style={styles.historySectionTitle}>Historial de Evidencias</Text>
+                                    <View style={styles.historyLine} />
+                                </View>
+
+                                {MOCK_EVIDENCE_HISTORY.map((group, gIdx) => (
+                                    <View key={gIdx} style={styles.historyDayGroup}>
+                                        <Text style={styles.historyDayLabel}>{group.day}</Text>
+                                        
+                                        <View style={styles.evidenceGrid}>
+                                            {group.items.filter(i => i.type === 'image').map((img) => (
+                                                <TouchableOpacity key={img.id} style={styles.evidenceThumbnail}>
+                                                    <View style={styles.thumbnailImgPlaceholder}>
+                                                        <Feather name="image" size={16} color={Colors.divider} />
+                                                    </View>
+                                                    <View style={styles.thumbnailMeta}>
+                                                        <Text style={styles.thumbnailTime}>{img.time}</Text>
+                                                    </View>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+
+                                        {group.items.filter(i => i.type !== 'image').map((item) => (
+                                            <TouchableOpacity key={item.id} style={styles.evidenceRowItem}>
+                                                <View style={[styles.evidenceIconBg, { backgroundColor: item.type === 'audio' ? '#E0F2FE' : '#F3F4F6' }]}>
+                                                    <Feather name={item.type === 'audio' ? 'mic' : 'file-text'} size={14} color={item.type === 'audio' ? '#0284C7' : Colors.textSecondary} />
+                                                </View>
+                                                <View style={styles.evidenceMainInfo}>
+                                                    <Text style={styles.evidenceTypeLabel}>{item.type === 'audio' ? `Nota de voz (${item.duration})` : 'Reporte técnico'}</Text>
+                                                    {item.content && <Text style={styles.evidenceExcerpt} numberOfLines={1}>{item.content}</Text>}
+                                                    <Text style={styles.evidenceMetaText}>{item.time} • Por {item.author}</Text>
+                                                </View>
+                                                <Feather name="chevron-right" size={16} color={Colors.divider} />
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
+                                ))}
                             </View>
                         </ScrollView>
                     )}
@@ -594,10 +692,11 @@ export default function Home() {
                     <View style={styles.dragHandle} />
                     
                     <View style={styles.incidentHeader}>
-                        <Text style={styles.incidentTitle}>Nueva Novedad</Text>
-                        <TouchableOpacity onPress={() => setShowIncidentModal(false)}>
-                            <Text style={styles.incidentCancel}>Cancelar</Text>
+                        <TouchableOpacity style={styles.modalBackBtn} onPress={() => setShowIncidentModal(false)}>
+                            <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
                         </TouchableOpacity>
+                        <Text style={styles.incidentTitle}>Nueva Novedad</Text>
+                        <View style={{ width: 40 }} />
                     </View>
 
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{paddingBottom: 40}}>
@@ -605,24 +704,32 @@ export default function Home() {
                         {/* Hierarchy 1: Categories Grid */}
                         <Text style={styles.incidentSectionTitle}>¿Qué sucedió?</Text>
                         <View style={styles.incidentGrid}>
-                            {tempIncidents.map((type) => (
-                                <TouchableOpacity 
-                                    key={type.id} 
-                                    activeOpacity={0.7}
-                                    style={[
-                                        styles.incidentTypeBtn, 
-                                        selectedIncidentType === type.id && { backgroundColor: type.color + '15', borderColor: type.color }
-                                    ]}
-                                    onPress={() => setSelectedIncidentType(type.id)}
-                                >
-                                    <View style={[styles.incidentIconCircle, { backgroundColor: type.color + '20' }]}>
-                                        <Feather name={type.icon as any} size={20} color={type.color} />
-                                    </View>
-                                    <Text style={[styles.incidentTypeLabel, selectedIncidentType === type.id && { color: type.color, fontWeight: '800' }]}>
-                                        {type.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
+                            {tempIncidents.map((type) => {
+                                const isActive = selectedIncidentType === type.id;
+                                return (
+                                    <TouchableOpacity 
+                                        key={type.id} 
+                                        activeOpacity={0.7}
+                                        style={[
+                                            styles.incidentTypeBtn, 
+                                            isActive && { 
+                                                backgroundColor: type.color + '10', 
+                                                borderColor: type.color,
+                                                transform: [{ scale: 1.02 }],
+                                                ...Shadows.md
+                                            }
+                                        ]}
+                                        onPress={() => setSelectedIncidentType(type.id)}
+                                    >
+                                        <View style={[styles.incidentIconCircle, { backgroundColor: type.color + '15' }, isActive && { backgroundColor: type.color }]}>
+                                            <Feather name={type.icon as any} size={22} color={isActive ? Colors.paper : type.color} />
+                                        </View>
+                                        <Text style={[styles.incidentTypeLabel, isActive && { color: type.color, fontWeight: '800' }]}>
+                                            {type.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
 
                         {/* Hierarchy 2: Dynamic "Otros" Input */}
@@ -664,20 +771,27 @@ export default function Home() {
                         )}
 
                         {/* Hierarchy 3: Detailed Comment */}
-                        <Text style={styles.incidentSectionTitle}>Comentario Adicional</Text>
+                        <Text style={styles.incidentSectionTitle}>Comentario Adicional (Opcional)</Text>
                         <View style={styles.incidentInputBox}>
                             <TextInput 
                                 style={styles.incidentTextInput}
                                 placeholder="Describe brevemente lo ocurrido..."
                                 placeholderTextColor={Colors.textMuted}
                                 multiline
+                                textAlignVertical="top"
                             />
                         </View>
 
                         <TouchableOpacity 
-                            style={[styles.incidentSubmitBtn, !selectedIncidentType && { opacity: 0.5 }]}
+                            style={[
+                                styles.incidentSubmitBtn, 
+                                !selectedIncidentType && { backgroundColor: Colors.divider, opacity: 0.6 }
+                            ]}
                             disabled={!selectedIncidentType}
-                            onPress={() => setShowIncidentModal(false)}
+                            onPress={() => {
+                                setShowIncidentModal(false);
+                                setSelectedIncidentType('');
+                            }}
                         >
                             <Text style={styles.incidentSubmitText}>Reportar Novedad</Text>
                         </TouchableOpacity>
@@ -713,28 +827,6 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  bellBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.paper,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  bellDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.error,
-    borderWidth: 1,
-    borderColor: Colors.paper,
   },
   avatar: {
     width: 36,
@@ -1247,18 +1339,18 @@ const styles = StyleSheet.create({
   },
   progressSegmentPast: {
     height: '100%',
-    backgroundColor: '#F87171', // Red for past
+    backgroundColor: '#FF8A8A', // Coral/Soft-Red from screenshot
     position: 'absolute',
   },
   progressSegmentToday: {
     height: '100%',
-    backgroundColor: '#4B5563', // Grey/Blue for today
+    backgroundColor: '#8E9AAF', // Slate-Blue from screenshot
     position: 'absolute',
   },
   expectedMarker: {
-    width: 2,
+    width: 2.5,
     height: '100%',
-    backgroundColor: Colors.textPrimary,
+    backgroundColor: '#4A5567', // Dark charcoal marker
     position: 'absolute',
     zIndex: 10,
   },
@@ -1323,22 +1415,19 @@ const styles = StyleSheet.create({
   },
   bottomNavContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    justifyContent: 'flex-end',
+    left: Spacing.xl,
+    right: Spacing.xl,
+    bottom: Spacing.lg,
+    height: 72,
+    zIndex: 100,
   },
-  bottomNavBackground: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 70,
-    backgroundColor: Colors.paper,
-    borderTopLeftRadius: Radii.lg,
-    borderTopRightRadius: Radii.lg,
-    ...Shadows.md,
+  floatingNavBackground: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 36,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+    ...Shadows.lg,
   },
   bottomNavContent: {
     flexDirection: 'row',
@@ -1473,8 +1562,8 @@ const styles = StyleSheet.create({
   },
   slideModalContent: {
     backgroundColor: Colors.paper,
-    borderTopLeftRadius: Radii.xl,
-    borderTopRightRadius: Radii.xl,
+    borderTopLeftRadius: Radii.lg,
+    borderTopRightRadius: Radii.lg,
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.xxl,
     paddingTop: Spacing.sm,
@@ -1486,8 +1575,8 @@ const styles = StyleSheet.create({
   },
   commentsModalContent: {
     backgroundColor: Colors.paper,
-    borderTopLeftRadius: Radii.xl,
-    borderTopRightRadius: Radii.xl,
+    borderTopLeftRadius: Radii.lg,
+    borderTopRightRadius: Radii.lg,
     height: '75%', // Mimic IG comments drawer height
     paddingTop: Spacing.sm,
     shadowColor: '#000',
@@ -1624,15 +1713,17 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     paddingTop: 8,
   },
+  modalBackBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   incidentTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: Colors.textPrimary,
-  },
-  incidentCancel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: Colors.error,
   },
   incidentSectionTitle: {
     fontSize: 12,
@@ -1652,13 +1743,13 @@ const styles = StyleSheet.create({
   incidentTypeBtn: {
     width: (width - 64) / 2, // 2 columns with spacing
     backgroundColor: Colors.paper,
-    borderRadius: Radii.xl,
+    borderRadius: Radii.lg,
     padding: Spacing.lg,
     marginBottom: Spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: Colors.border,
     ...Shadows.sm,
   },
   incidentIconCircle: {

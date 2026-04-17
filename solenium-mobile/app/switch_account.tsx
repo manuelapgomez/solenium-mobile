@@ -21,7 +21,7 @@ export default function SwitchAccountScreen() {
   const handleSelectUser = (userId: string) => {
     if (isEditing) return;
     // For existing users on the device, we only need 1 verification photo
-    router.replace({ pathname: '/onboarding', params: { userId, mode: 'verify' } });
+    router.replace({ pathname: '/onboarding' as any, params: { userId, mode: 'verify' } });
   };
 
   const handleDeleteUser = (userId: string) => {
@@ -83,7 +83,7 @@ export default function SwitchAccountScreen() {
 
             <TouchableOpacity 
                 style={styles.newUserBtn}
-                onPress={() => router.push({ pathname: '/onboarding', params: { mode: 'register' } })}
+                onPress={() => router.push({ pathname: '/onboarding' as any, params: { mode: 'register' } })}
             >
                 <Feather name="plus-circle" size={20} color={Colors.primary} />
                 <Text style={styles.newUserText}>Registrar nuevo usuario</Text>

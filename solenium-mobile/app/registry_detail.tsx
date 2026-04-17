@@ -23,77 +23,104 @@ export default function RegistryDetailScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.content}>
-        {/* HEADER */}
+        {/* MODER HEADER */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Feather name="chevron-left" size={24} color={Colors.textPrimary} />
+            <Feather name="chevron-left" size={26} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Detalle de Registro</Text>
-          <View style={{ width: 40 }} />
+          <Text style={styles.headerTitle}>Certificado de Registro</Text>
+          <TouchableOpacity style={styles.shareBtn}>
+            <Feather name="share-2" size={20} color={Colors.primary} />
+          </TouchableOpacity>
         </View>
 
-        {/* PHOTO SECTION */}
-        <View style={styles.photoContainer}>
-           <ImageBackground 
-             source={require('../assets/images/worker_face.png')} 
-             style={styles.photo}
-             imageStyle={{ borderRadius: Radii.lg }}
-           >
-              <View style={styles.photoOverlay}>
-                 <View style={styles.validBadge}>
-                    <Feather name="shield" size={12} color={Colors.paper} />
-                    <Text style={styles.validText}>BIOMETRÍA VALIDADA</Text>
-                 </View>
-              </View>
-           </ImageBackground>
-        </View>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Spacing.xxl }}>
+            {/* PHOTO HERO SECTION - "IDENTITY CARD" FEEL */}
+            <View style={styles.idCardContainer}>
+                <ImageBackground 
+                    source={require('../assets/images/worker_face.png')} 
+                    style={styles.photoHero}
+                    imageStyle={{ borderRadius: Radii.xl }}
+                >
+                    <View style={styles.hologramOverlay}>
+                        <View style={styles.biometricBadge}>
+                            <View style={styles.pulseDot} />
+                            <Feather name="shield" size={14} color={Colors.paper} />
+                            <Text style={styles.biometricText}>BIOMETRÍA VALIDADA</Text>
+                        </View>
+                    </View>
+                </ImageBackground>
+                
+                {/* FLOATING HUD INDICATORS */}
+                <View style={styles.hudContainer}>
+                    <View style={styles.hudItem}>
+                        <Feather name="cpu" size={12} color={Colors.success} />
+                        <Text style={styles.hudText}>MATCH: 99.8%</Text>
+                    </View>
+                    <View style={styles.hudDivider} />
+                    <View style={styles.hudItem}>
+                        <Feather name="map-pin" size={12} color={Colors.primary} />
+                        <Text style={styles.hudText}>GPS: ALTA PRECISIÓN</Text>
+                    </View>
+                </View>
+            </View>
 
-        {/* INFO CARD */}
-        <View style={styles.infoCard}>
-           <TouchableOpacity 
-             style={styles.projectSection}
-             onPress={() => setShowProjectModal(true)}
-             activeOpacity={0.7}
-           >
-              <View style={{flex: 1}}>
-                <Text style={styles.label}>PROYECTO</Text>
-                <Text style={styles.projectValue}>{activeProjectName}</Text>
-              </View>
-              <View style={styles.changeBadge}>
-                 <Text style={styles.changeText}>CAMBIAR</Text>
-                 <Feather name="chevron-down" size={12} color={Colors.primary} />
-              </View>
-           </TouchableOpacity>
-           
-           <View style={styles.divider} />
+            {/*主 INFO CARD - SLEEK & SPACED */}
+            <View style={styles.mainInfoCard}>
+                <View style={styles.dataPoint}>
+                    <Text style={styles.dataLabel}>PROYECTO ACTIVO</Text>
+                    <TouchableOpacity 
+                        style={styles.projectSelector}
+                        onPress={() => setShowProjectModal(true)}
+                    >
+                        <Text style={styles.projectTitle}>{activeProjectName}</Text>
+                        <Feather name="edit-3" size={14} color={Colors.primary} />
+                    </TouchableOpacity>
+                </View>
 
-           <View style={styles.detailRow}>
-              <View style={styles.detailItem}>
-                 <Text style={styles.label}>TIPO</Text>
-                 <View style={[styles.typeBadge, { backgroundColor: isExit ? Colors.errorLight : Colors.successLight }]}>
-                    <Feather name={isExit ? "moon" : "sunrise"} size={14} color={isExit ? Colors.error : Colors.success} />
-                    <Text style={[styles.typeText, { color: isExit ? Colors.error : Colors.success }]}>
-                       {isExit ? 'SALIDA' : 'INGRESO'}
-                    </Text>
-                 </View>
-              </View>
-              
-              <View style={styles.detailItem}>
-                 <Text style={styles.label}>HORA</Text>
-                 <Text style={styles.timeValue}>{time || '07:00 AM'}</Text>
-              </View>
-           </View>
+                <View style={styles.dataGrid}>
+                    <View style={styles.gridItem}>
+                        <Text style={styles.dataLabel}>MOVIMIENTO</Text>
+                        <View style={[styles.typeStatusPill, { backgroundColor: isExit ? '#FFF1F2' : '#F0FDF4' }]}>
+                            <Feather name={isExit ? "log-out" : "log-in"} size={16} color={isExit ? Colors.error : Colors.success} />
+                            <Text style={[styles.typeStatusText, { color: isExit ? Colors.error : Colors.success }]}>
+                                {isExit ? 'SALIDA' : 'INGRESO'}
+                            </Text>
+                        </View>
+                    </View>
+                    
+                    <View style={styles.gridItem}>
+                        <Text style={styles.dataLabel}>HORA LOCAL</Text>
+                        <Text style={styles.timeDisplay}>{time || '18:00 PM'}</Text>
+                    </View>
+                </View>
 
-           <View style={styles.locationSection}>
-              <Feather name="map-pin" size={14} color={Colors.textMuted} />
-              <Text style={styles.locationText}>Antioquia, Colombia (GPS Validado)</Text>
-           </View>
-        </View>
+                <View style={styles.locationFooter}>
+                    <View style={styles.locationIconBg}>
+                        <Feather name="navigation" size={16} color={Colors.textSecondary} />
+                    </View>
+                    <View>
+                        <Text style={styles.locationMain}>Antioquia, Colombia</Text>
+                        <Text style={styles.locationSub}>7.1234° N, 75.5678° W • Validado por GPS</Text>
+                    </View>
+                </View>
+            </View>
 
-        {/* FOOTER ACTION */}
-        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
-           <Text style={styles.closeBtnText}>Cerrar Detalle</Text>
-        </TouchableOpacity>
+            {/* SECURITY LOG SECTION */}
+            <View style={styles.securityLog}>
+                <Feather name="lock" size={14} color={Colors.textMuted} />
+                <Text style={styles.securityLogText}>
+                    Este registro es único, inmutable y está vinculado a la identidad biométrica del trabajador. ID: SOL-{Math.floor(Math.random() * 900000) + 100000}
+                </Text>
+            </View>
+
+            <TouchableOpacity 
+                style={styles.primaryActionBtn}
+                onPress={() => router.back()}
+            >
+                <Text style={styles.primaryActionText}>Finalizar Consulta</Text>
+            </TouchableOpacity>
+        </ScrollView>
       </SafeAreaView>
 
       {/* Project Switcher Modal */}
@@ -135,14 +162,13 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: Spacing.xl,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl,
     paddingVertical: Spacing.md,
-    marginBottom: Spacing.lg,
   },
   headerTitle: {
     fontSize: 18,
@@ -155,162 +181,220 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  photoContainer: {
+  shareBtn: {
+    width: 40,
+    height: 40,
+    backgroundColor: Colors.paper,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.sm,
+  },
+  idCardContainer: {
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.md,
+  },
+  photoHero: {
     width: '100%',
-    aspectRatio: 4/5,
-    marginBottom: Spacing.xl,
+    aspectRatio: 3/4,
+    justifyContent: 'flex-end',
     ...Shadows.lg,
   },
-  photo: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  photoOverlay: {
+  hologramOverlay: {
     padding: Spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
   },
-  validBadge: {
+  biometricBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.success,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  validText: {
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: Colors.success,
+    marginRight: 8,
+  },
+  biometricText: {
     color: Colors.paper,
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '900',
+    letterSpacing: 1,
     marginLeft: 4,
   },
-  infoCard: {
+  hudContainer: {
+    flexDirection: 'row',
     backgroundColor: Colors.paper,
-    borderRadius: Radii.lg,
-    padding: Spacing.xl,
+    marginTop: -20,
+    marginHorizontal: Spacing.lg,
+    padding: 12,
+    borderRadius: Radii.md,
+    alignItems: 'center',
     ...Shadows.md,
   },
-  label: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textMuted,
-    letterSpacing: 1,
-    marginBottom: 6,
+  hudItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  projectValue: {
+  hudText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: Colors.textSecondary,
+    marginLeft: 6,
+  },
+  hudDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: Colors.divider,
+  },
+  mainInfoCard: {
+    backgroundColor: Colors.paper,
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+    padding: Spacing.lg,
+    borderRadius: Radii.lg,
+    ...Shadows.sm,
+  },
+  dataPoint: {
+    marginBottom: Spacing.lg,
+  },
+  dataLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: Colors.textMuted,
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  projectSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  projectTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: Colors.textPrimary,
   },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.divider,
-    marginVertical: Spacing.lg,
-  },
-  detailRow: {
+  dataGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingBottom: Spacing.lg,
     marginBottom: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
   },
-  detailItem: {
+  gridItem: {
     flex: 1,
   },
-  typeBadge: {
+  typeStatusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingHorizontal: Spacing.sm,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: Radii.sm,
-    marginTop: 2,
+    borderRadius: 6,
+    marginTop: 4,
   },
-  typeText: {
-    fontSize: 14,
-    fontWeight: '800',
+  typeStatusText: {
+    fontSize: 13,
+    fontWeight: '900',
     marginLeft: 4,
   },
-  timeValue: {
+  timeDisplay: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '900',
     color: Colors.textPrimary,
+    marginTop: 4,
   },
-  locationSection: {
+  locationFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: Colors.divider,
-    paddingTop: Spacing.md,
   },
-  locationText: {
-    fontSize: 12,
+  locationIconBg: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: Colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  locationMain: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  locationSub: {
+    fontSize: 11,
     color: Colors.textMuted,
-    marginLeft: 6,
-    fontWeight: '500',
+    marginTop: 2,
   },
-  closeBtn: {
-    marginTop: 'auto',
-    marginBottom: Spacing.xl,
+  securityLog: {
+    flexDirection: 'row',
+    paddingHorizontal: Spacing.xl,
+    marginTop: Spacing.xl,
+    opacity: 0.7,
+  },
+  securityLogText: {
+    flex: 1,
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginLeft: 8,
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+  primaryActionBtn: {
+    marginHorizontal: Spacing.xl,
+    marginTop: Spacing.xxl,
+    height: 56,
     backgroundColor: Colors.textPrimary,
-    height: 60,
     borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
     ...Shadows.md,
   },
-  closeBtnText: {
+  primaryActionText: {
     color: Colors.paper,
     fontSize: 16,
     fontWeight: '800',
   },
-  projectSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  changeBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  changeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.primary,
-    marginRight: 4,
-  },
-  // Modal Styles
+  // Modal Styles (Kept for Project Switcher)
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: Spacing.xl,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    width: '100%',
     backgroundColor: Colors.paper,
-    borderRadius: Radii.lg,
+    borderTopLeftRadius: Radii.xl,
+    borderTopRightRadius: Radii.xl,
     padding: Spacing.xl,
-    ...Shadows.lg,
+    paddingBottom: 40,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: Colors.textPrimary,
     marginBottom: Spacing.lg,
+    textAlign: 'center',
   },
   projectOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
   },
   projectOptionActive: {
-    backgroundColor: 'rgba(56, 189, 248, 0.05)',
+    backgroundColor: 'rgba(14, 133, 189, 0.05)',
   },
   projectOptionText: {
     fontSize: 16,
@@ -318,7 +402,7 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.md,
   },
   projectOptionTextActive: {
-    color: Colors.textPrimary,
+    color: Colors.primary,
     fontWeight: '700',
   },
 });

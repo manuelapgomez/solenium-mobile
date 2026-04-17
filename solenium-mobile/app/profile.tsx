@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Dimensions, TextStyle } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter } from 'expo-router';
+import { SessionManager } from '../constants/session';
 
 const { width } = Dimensions.get('window');
 
@@ -42,6 +43,7 @@ const MOCK_DAILY_AGENDA: any = {
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedDay, setSelectedDay] = useState(9);
   const monthDays = generateMockMonth();
   const selectedDayData = monthDays.find(d => d.number === selectedDay);
@@ -51,16 +53,17 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
       {/* Dynamic Header with Back Button */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/')}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mi Perfil y Registro</Text>
-        <TouchableOpacity style={styles.settingsBtn}>
-          <Feather name="settings" size={20} color={Colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={{width: 40}} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(insets.bottom + 40, Spacing.xxl) }]}
+      >
         
         {/* HIGH HIERARCHY USER CARD */}
         <View style={styles.profileMasterCard}>
@@ -81,7 +84,7 @@ export default function ProfileScreen() {
 
             <View style={styles.adminActionsDivider} />
 
-            <TouchableOpacity style={styles.switchAccountRow} onPress={() => router.push('/switch_account')}>
+            <TouchableOpacity style={styles.switchAccountRow} onPress={() => router.push('/switch_account' as any)}>
                 <View style={styles.switchAccountLeft}>
                     <View style={styles.switchAccountIconBg}>
                         <Feather name="users" size={18} color={Colors.primary} />
@@ -95,30 +98,11 @@ export default function ProfileScreen() {
             </TouchableOpacity>
         </View>
 
-        {/* MONTHLY STATS SUMMARY */}
-        <View style={styles.statsRow}>
-            <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Días</Text>
-                <Text style={styles.statValue}>22</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-                <Text style={styles.statLabel}>Horas</Text>
-                <Text style={styles.statValue}>176.5</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-                <Text style={[styles.statLabel, {color: '#7C3AED'}]}>H. Extra</Text>
-                <View style={styles.overtimeValueRow}>
-                    <Feather name="zap" size={14} color="#7C3AED" />
-                    <Text style={[styles.statValue, {color: '#7C3AED', marginLeft: 4}]}>12.0</Text>
-                </View>
-            </View>
-        </View>
 
-        {/* MONTHLY REGISTRY SECTION */}
+
+        {/* MONTHLY REGISTRY SECTION - OPTIMIZED BASICS */}
         <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionTitle}>Mi Registro Mensual</Text>
+            <Text style={styles.sectionTitle}>Registro Mensual</Text>
             <View style={styles.monthPill}>
                 <Text style={styles.monthPillText}>Mayo 2026</Text>
             </View>
@@ -135,8 +119,8 @@ export default function ProfileScreen() {
               {monthDays.map((day) => {
                  if (day.empty) return <View key={day.id} style={styles.dayCellEmpty} />;
 
-                 let cellStyle = null;
-                 let textStyle = null;
+                 let cellStyle: any = null;
+                 let textStyle: any = { color: Colors.textPrimary };
 
                  if (day.status === 'completed') {
                     cellStyle = { backgroundColor: Colors.successLight };
@@ -160,12 +144,9 @@ export default function ProfileScreen() {
                             cellStyle,
                             day.number === selectedDay && !day.isToday && { borderWidth: 2, borderColor: Colors.primary }
                         ]}
-                        onPress={() => setSelectedDay(day.number)}
+                        onPress={() => setSelectedDay(day.number!)}
                     >
                        <Text style={[styles.dayText, textStyle]}>{day.number}</Text>
-                       {day.hasOvertime && (
-                           <View style={styles.overtimeDot} />
-                       )}
                     </TouchableOpacity>
                  );
               })}
@@ -175,12 +156,7 @@ export default function ProfileScreen() {
         {/* DAILY AGENDA DETAIL */}
         <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Actividad día {selectedDay}</Text>
-            {selectedDayData?.hasOvertime && (
-                <View style={styles.overtimePill}>
-                    <Feather name="zap" size={10} color="#7C3AED" />
-                    <Text style={styles.overtimePillText}>Horas Extra</Text>
-                </View>
-            )}
+
         </View>
         
         {currentAgenda.length > 0 ? (
@@ -217,7 +193,10 @@ export default function ProfileScreen() {
 
         <TouchableOpacity 
             style={styles.fullLogoutBtn}
-            onPress={() => router.replace('/onboarding')}
+            onPress={() => {
+                SessionManager.setUserId(null);
+                router.replace('/login' as any);
+            }}
         >
             <Text style={styles.fullLogoutText}>Cerrar Sesión</Text>
         </TouchableOpacity>
@@ -267,7 +246,7 @@ const styles = StyleSheet.create({
   },
   profileMasterCard: {
     backgroundColor: Colors.paper,
-    borderRadius: Radii.xl,
+    borderRadius: Radii.lg,
     padding: Spacing.lg,
     marginTop: Spacing.md,
     marginBottom: Spacing.xl,
@@ -432,7 +411,7 @@ const styles = StyleSheet.create({
   calendarCard: {
     backgroundColor: Colors.paper,
     borderRadius: Radii.lg,
-    padding: Spacing.lg,
+    padding: Spacing.md,
     marginBottom: Spacing.xl,
     ...Shadows.sm,
   },
@@ -440,6 +419,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: Spacing.md,
+    marginTop: Spacing.xs,
   },
   weekDayText: {
     width: '14.2%',
@@ -467,34 +447,7 @@ const styles = StyleSheet.create({
   dayText: {
     fontSize: 14,
     color: Colors.textPrimary,
-    fontWeight: '500',
-  },
-  overtimeDot: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#7C3AED', // Violet for Overtime
-    borderWidth: 1,
-    borderColor: Colors.paper,
-  },
-  overtimePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F5F3FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: Radii.full,
-    borderWidth: 1,
-    borderColor: '#DDD6FE',
-  },
-  overtimePillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#7C3AED',
-    marginLeft: 4,
+    fontWeight: '600',
   },
   historyCard: {
     flexDirection: 'row',

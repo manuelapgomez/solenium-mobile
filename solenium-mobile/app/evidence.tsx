@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { SessionManager } from '../constants/session';
 // Hardware APIs
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
@@ -130,7 +131,13 @@ export default function EvidenceScreen() {
                     <Feather name="x" size={24} color={Colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Nueva publicación</Text>
-                <TouchableOpacity onPress={() => router.push({ pathname: '/audio_evidence', params: { title, targetQuantity, unit } })} style={styles.headerActionBtn}>
+                <TouchableOpacity 
+                    onPress={() => router.push({ 
+                        pathname: '/audio_evidence' as any, 
+                        params: { title, targetQuantity, unit } 
+                    })} 
+                    style={styles.headerActionBtn}
+                >
                     <Text style={styles.headerActionText}>Siguiente</Text>
                 </TouchableOpacity>
             </View>

@@ -3,31 +3,42 @@
  * Referencia: Moodboard Minimalista, Leyes de Gestalt (Contraste, Cierre, Proximidad).
  */
 
-export const Colors = {
+const SoleniumColors = {
   // Fondos y Superficies
-  background: '#F9FAFB', // Un off-white muy limpio y moderno
-  paper: '#FFFFFF', // Blanco puro para las tarjetas (Cards, Modales)
+  background: '#F9FAFB',
+  paper: '#FFFFFF',
   
   // Marca y Acción Principal
-  primary: '#4285F4', // Azul brillante y energético (basado en el referente del timeline)
-  primaryLight: '#E8F0FE', // Fondo suave para estados primarios inactivos
+  primary: '#0E85BD',
+  primaryLight: '#E7F2F7',
   
   // Textos y Grises para Jerarquía Tipográfica
-  textPrimary: '#111827', // Casi negro, excelente contraste para títulos
-  textSecondary: '#6B7280', // Gris neutro para descripciones (Gestalt: Figura-fondo secundario)
+  textPrimary: '#111827',
+  textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
+  text: '#111827',
   
-  // Estados Operativos (Alto contraste exigido por el Skill de Solar Ops)
-  success: '#10B981', // Verde OK: check-in, tareas completadas
+  // Estados Operativos
+  success: '#10B981',
   successLight: '#D1FAE5',
-  warning: '#F59E0B', // Naranja Warning: Novedades parciales
+  warning: '#F59E0B',
   warningLight: '#FEF3C7',
-  error: '#EF4444', // Rojo Error: Entregas tardías o rechazos
+  error: '#EF4444',
   errorLight: '#FEE2E2',
   
   // Elementos UI
   border: '#E5E7EB',
   divider: '#F3F4F6',
+  tint: '#4285F4',
+  icon: '#6B7280',
+  tabIconDefault: '#9CA3AF',
+  tabIconSelected: '#4285F4',
+};
+
+export const Colors = {
+  light: SoleniumColors,
+  dark: SoleniumColors, // For proto we keep it consistent
+  ...SoleniumColors, // Export flat for direct access
 };
 
 // Sombras sutiles basadas en referentes para darle el efecto de capa/cierre (Gestalt)sin abrumar
@@ -47,7 +58,7 @@ export const Shadows = {
     elevation: 4,
   },
   lg: { // Usado típicamente para el FAB (Floating Action Button)
-    shadowColor: '#4285F4',
+    shadowColor: '#0E85BD',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 16,
@@ -68,5 +79,6 @@ export const Radii = {
   sm: 8,
   md: 16, // Para tarjetas secundarias
   lg: 24, // Para tarjetas principales (Check-in, Timeline active card)
+  xl: 32, // Para ID Cards y modales inmersivos
   full: 9999, // Para avatares, status dots, FAB
 };

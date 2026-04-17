@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Colors, Radii, Shadows, Spacing } from '../constants/theme';
@@ -7,23 +7,18 @@ import { useRouter } from 'expo-router';
 
 // Utilities to mock a calendar
 const DAYS_OF_WEEK = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-// A completely mocked month grid (e.g. May 2026 starting on Friday)
 const generateMockMonth = () => {
   const days = [];
-  // 5 empty spots for May 1st starting on Friday
   for (let i = 0; i < 5; i++) {
      days.push({ id: `e${i}`, empty: true });
   }
   for (let i = 1; i <= 31; i++) {
-     const isToday = i === 9; // Let's say today is 9
-     
-     // Mock logic to populate semaphore statuses
+     const isToday = i === 9;
      let status = 'upcoming';
      if (isToday) status = 'active';
-     else if (i === 6) status = 'missing'; // Rojo
-     else if (i === 7) status = 'incomplete'; // Naranja
-     else if (i < 9) status = 'completed'; // Verde
-     
+     else if (i === 6) status = 'missing';
+     else if (i === 7) status = 'incomplete';
+     else if (i < 9) status = 'completed';
      days.push({ id: `d${i}`, number: i, empty: false, status, isToday });
   }
   return days;
@@ -31,7 +26,7 @@ const generateMockMonth = () => {
 
 export default function CalendarScreen() {
   const router = useRouter();
-  const [selectedDay, setSelectedDay] = React.useState(9); // Default to today
+  const [selectedDay, setSelectedDay] = React.useState(9);
   const monthDays = generateMockMonth();
 
   const MOCK_DAILY_AGENDA: any = {
@@ -47,8 +42,6 @@ export default function CalendarScreen() {
     7: [
        { id: 301, title: 'Check-In Facial', time: '07:10 AM', type: 'registry', status: 'In' },
        { id: 302, title: 'Cableado DC', time: '08:00 AM', type: 'activity', detail: 'Zanjas Sector Sur' },
-       // Note: Missing Check-Out implies an incomplete day (orange) or missing registry (red).
-       // We'll inject the alert directly in the UI if the day status is missing.
     ],
     6: [
        { id: 401, title: 'Check-In Facial', time: '06:50 AM', type: 'registry', status: 'In' },
@@ -61,7 +54,6 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={24} color={Colors.textPrimary} />
@@ -71,15 +63,12 @@ export default function CalendarScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        
-        {/* Month Selector */}
         <View style={styles.monthSelector}>
            <Feather name="chevron-left" size={24} color={Colors.textMuted} />
            <Text style={styles.monthName}>Mayo 2026</Text>
            <Feather name="chevron-right" size={24} color={Colors.textMuted} />
         </View>
 
-        {/* Global Record Stats */}
         <View style={styles.statsCard}>
            <View style={styles.statCol}>
               <Text style={styles.statNum}>8</Text>
@@ -92,25 +81,19 @@ export default function CalendarScreen() {
            </View>
         </View>
 
-        {/* Calendar Grid */}
         <View style={styles.calendarCard}>
-           {/* Days Row */}
            <View style={styles.weekDaysRow}>
               {DAYS_OF_WEEK.map(day => (
                  <Text key={day} style={styles.weekDayText}>{day}</Text>
               ))}
            </View>
            
-           {/* Grid */}
            <View style={styles.daysGrid}>
               {monthDays.map((day) => {
-                 if (day.empty) {
-                    return <View key={day.id} style={styles.dayCellEmpty} />;
-                 }
+                 if (day.empty) return <View key={day.id} style={styles.dayCellEmpty} />;
 
-                 // Styles logic based on status
-                 let cellStyle = null;
-                 let textStyle = null;
+                 let cellStyle: any = null;
+                 let textStyle: any = null;
 
                  if (day.status === 'completed') {
                     cellStyle = { backgroundColor: Colors.successLight };
@@ -134,7 +117,7 @@ export default function CalendarScreen() {
                             cellStyle,
                             day.number === selectedDay && !day.isToday && { borderWidth: 2, borderColor: Colors.primary }
                         ]}
-                        onPress={() => setSelectedDay(day.number)}
+                        onPress={() => setSelectedDay(day.number!)}
                     >
                        <Text style={[styles.dayText, textStyle]}>{day.number}</Text>
                        {day.status === 'worked' && <View style={styles.workedDot} />}
@@ -146,7 +129,6 @@ export default function CalendarScreen() {
 
         <Text style={styles.sectionTitle}>Agenda Ejecutada - {selectedDay} Mayo</Text>
         
-        {/* Missing Registry Injection */}
         {selectedDayData?.status === 'missing' && (
             <View style={styles.missingAlertCard}>
                 <Feather name="alert-triangle" size={24} color={Colors.error} style={{marginRight: Spacing.md}} />
@@ -363,30 +345,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: Colors.textSecondary,
     marginTop: 2,
-    marginBottom: 4,
-  },
-  historyTimes: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  timeIn: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.success,
-  },
-  timeOut: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.error,
-  },
-  timeSep: {
-    fontSize: 11,
-    color: Colors.textMuted,
-  },
-  historyHours: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.primary,
   },
   statusBadgeSmall: {
     paddingHorizontal: 8,
